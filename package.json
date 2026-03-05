@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "dev": "cd my-bar-app && npm run dev",
+    "build": "cd my-bar-app && npm run build",
+    "preview": "cd my-bar-app && npm run preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.96.0"
+  }
+}

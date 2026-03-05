@@ -1,0 +1,94 @@
+.page-header-nav {
+  background: white;
+  padding: 15px 30px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.page-header-brand {
+  margin: 0;
+  font-size: 1.5em;
+  color: #333;
+}
+
+.page-header-company {
+  font-size: 0.95em;
+  color: #667eea;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: #f0f2ff;
+  border-radius: 20px;
+}
+
+.page-header-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-page-home,
+.btn-page-signout {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.9em;
+  border: 2px solid transparent;
+}
+
+.btn-page-home {
+  background: white;
+  border-color: #e0e0e0;
+  color: #667eea;
+}
+
+.btn-page-home:hover {
+  background: #f0f2ff;
+  border-color: #667eea;
+}
+
+.btn-page-signout {
+  background: white;
+  border-color: #e0e0e0;
+  color: #666;
+}
+
+.btn-page-signout:hover {
+  border-color: #f56565;
+  color: #f56565;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page-header-nav {
+    padding: 12px 15px;
+    flex-wrap: wrap;
+  }
+
+  .page-header-brand {
+    font-size: 1.2em;
+  }
+
+  .page-header-company {
+    font-size: 0.85em;
+  }
+
+  .btn-page-home,
+  .btn-page-signout {
+    padding: 6px 12px;
+    font-size: 0.85em;
+  }
+}

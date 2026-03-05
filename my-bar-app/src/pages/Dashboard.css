@@ -1,0 +1,190 @@
+/* Dashboard Container */
+.dashboard-container {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+/* Navigation */
+.dashboard-nav {
+  background: white;
+  padding: 20px 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.nav-brand h1 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #333;
+}
+
+.role-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-owner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.role-admin {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.role-staff {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: white;
+}
+
+.role-customer {
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  color: white;
+}
+
+.btn-signout {
+  padding: 10px 20px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  color: #666;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-signout:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+/* Dashboard Content */
+.dashboard-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.dashboard-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.dashboard-header h2 {
+  margin: 0 0 10px 0;
+  font-size: 2.5em;
+  color: #333;
+}
+
+.dashboard-header p {
+  margin: 0;
+  font-size: 1.1em;
+  color: #666;
+}
+
+.dashboard-header .company-name {
+  margin: 8px 0 0 0;
+  font-size: 1.2em;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+.card-icon {
+  font-size: 3em;
+  margin-bottom: 15px;
+}
+
+.dashboard-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.3em;
+  color: #333;
+}
+
+.dashboard-card p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.btn-card {
+  width: 100%;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-nav {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 2em;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-brand h1 {
+    font-size: 1.5em;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.75em;
+  }
+
+  .dashboard-card {
+    padding: 20px;
+  }
+}
