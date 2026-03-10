@@ -29,6 +29,86 @@ ChartJS.register(
   Legend
 )
 
+// Add custom styles for animations
+const styles = `
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.2);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes highlightUpdate {
+    0% {
+      background-color: #fff9e6;
+      box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+    }
+    100% {
+      background-color: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .stat-card.updating {
+    animation: highlightUpdate 1s ease-out;
+  }
+
+  .stat-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0;
+  }
+
+  .stat-label {
+    font-size: 0.95em;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+`
+
 export default function ReportsPage() {
   const { userProfile } = useAuth()
   const [dateRange, setDateRange] = useState('30') // days
@@ -45,10 +125,66 @@ export default function ReportsPage() {
   const [salesTrend, setSalesTrend] = useState({ labels: [], data: [] })
   const [recentTransactions, setRecentTransactions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isLive, setIsLive] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [updateAnimation, setUpdateAnimation] = useState(false)
 
+  // Initial load and date range changes
   useEffect(() => {
     fetchAllAnalytics()
   }, [dateRange])
+
+  // Real-time subscription for transactions
+  useEffect(() => {
+    if (!userProfile?.tenant_id || !isLive) return
+
+    console.log('🔴 Setting up real-time analytics subscription...')
+    
+    // Subscribe to all transaction changes for this tenant
+    const channel = supabase
+      .channel('analytics-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'transactions',
+          filter: `tenant_id=eq.${userProfile.tenant_id}`
+        },
+        (payload) => {
+          console.log('🔴 Real-time update received:', payload)
+          setUpdateAnimation(true)
+          setLastUpdate(new Date())
+          
+          // Refresh analytics after a short delay to allow DB to settle
+          setTimeout(() => {
+            fetchAllAnalytics()
+            setTimeout(() => setUpdateAnimation(false), 1000)
+          }, 500)
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Real-time subscription status:', status)
+      })
+
+    return () => {
+      console.log('🔴 Cleaning up real-time subscription')
+      supabase.removeChannel(channel)
+    }
+  }, [userProfile?.tenant_id, isLive])
+
+  // Auto-refresh every 30 seconds as backup
+  useEffect(() => {
+    if (!isLive) return
+
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refresh triggered')
+      fetchAllAnalytics()
+      setLastUpdate(new Date())
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [isLive, dateRange])
 
   const fetchAllAnalytics = async () => {
     setLoading(true)
@@ -379,13 +515,66 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
+      <style>{styles}</style>
       <div className="page-content">
         <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2>📊 Business Analytics & Reports</h2>
-            <p>Comprehensive insights into your bar's performance</p>
+            <p>Real-time insights into your bar's performance</p>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.9em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ 
+                  width: '10px', 
+                  height: '10px', 
+                  borderRadius: '50%', 
+                  background: isLive ? '#28a745' : '#6c757d',
+                  animation: isLive ? 'pulse 2s infinite' : 'none'
+                }} />
+                <span style={{ color: '#666' }}>
+                  {isLive ? 'Live Updates' : 'Paused'}
+                </span>
+              </div>
+              <div style={{ color: '#999', fontSize: '0.85em' }}>
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </div>
+            </div>
           </div>
-          <div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button 
+              onClick={() => {
+                fetchAllAnalytics()
+                setLastUpdate(new Date())
+              }}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '6px', 
+                border: '1px solid #ddd',
+                background: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Refresh now"
+            >
+              🔄 Refresh
+            </button>
+            
+            <button 
+              onClick={() => setIsLive(!isLive)}
+              style={{ 
+                padding: '8px 16px', 
+                borderRadius: '6px', 
+                border: '1px solid #ddd',
+                background: isLive ? '#d4edda' : '#f8f9fa',
+                cursor: 'pointer',
+                fontWeight: '500'
+              }}
+              title={isLive ? 'Pause live updates' : 'Resume live updates'}
+            >
+              {isLive ? '⏸️ Pause' : '▶️ Resume'}
+            </button>
+
             <select 
               value={dateRange} 
               onChange={(e) => setDateRange(e.target.value)}
@@ -405,7 +594,7 @@ export default function ReportsPage() {
           <>
             {/* Key Metrics */}
             <div className="stats-grid">
-              <div className="stat-card">
+              <div className={`stat-card ${updateAnimation ? 'updating' : ''}`}>
                 <div className="stat-icon">💰</div>
                 <div className="stat-value">R {stats.totalRevenue}</div>
                 <div className="stat-label">Total Revenue</div>
@@ -416,25 +605,25 @@ export default function ReportsPage() {
                 )}
               </div>
 
-              <div className="stat-card">
+              <div className={`stat-card ${updateAnimation ? 'updating' : ''}`}>
                 <div className="stat-icon">💳</div>
                 <div className="stat-value">{stats.totalTransactions}</div>
                 <div className="stat-label">Total Transactions</div>
               </div>
 
-              <div className="stat-card">
+              <div className={`stat-card ${updateAnimation ? 'updating' : ''}`}>
                 <div className="stat-icon">⏳</div>
                 <div className="stat-value">{stats.pendingTransactions}</div>
                 <div className="stat-label">Pending Payments</div>
               </div>
 
-              <div className="stat-card">
+              <div className={`stat-card ${updateAnimation ? 'updating' : ''}`}>
                 <div className="stat-icon">🍺</div>
                 <div className="stat-value">{stats.totalProducts}</div>
                 <div className="stat-label">Products</div>
               </div>
 
-              <div className="stat-card">
+              <div className={`stat-card ${updateAnimation ? 'updating' : ''}`}>
                 <div className="stat-icon">🎉</div>
                 <div className="stat-value">{stats.activeEvents}</div>
                 <div className="stat-label">Active Events</div>
