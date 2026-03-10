@@ -326,6 +326,14 @@ Deno.serve(async (req: Request) => {
           quantity: item.quantity,
         }))
         
+        // Create a minimal metadata object (Stripe limit: 500 chars per value)
+        // Store full cart data in database instead
+        const cartSummary = cartItems.map((item: any) => ({
+          id: item.id,
+          qty: item.quantity,
+          price: item.price
+        }))
+        
         sessionConfig = {
           payment_method_types: ['card'],
           line_items: lineItems,
@@ -333,10 +341,11 @@ Deno.serve(async (req: Request) => {
           success_url: `${req.headers.get('origin')}/customer/orders?session_id={CHECKOUT_SESSION_ID}&success=true`,
           cancel_url: `${req.headers.get('origin')}/customer/orders?canceled=true`,
           metadata: {
-            userId: user.id, // Always use authenticated user ID
-            tenantId: userProfile.tenant_id, // Always use user's tenant ID for isolation
-            cartData: JSON.stringify(cartItems),
-            userRole: userProfile.role, // Track user role for validation
+            userId: user.id,
+            tenantId: userProfile.tenant_id,
+            userRole: userProfile.role,
+            itemCount: cartItems.length.toString(),
+            totalAmount: totalAmount?.toString() || '0',
           },
         }
       }

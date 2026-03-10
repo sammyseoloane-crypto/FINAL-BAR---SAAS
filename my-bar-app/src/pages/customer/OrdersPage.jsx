@@ -192,11 +192,31 @@ export default function OrdersPage() {
         console.error('❌ Function error context:', functionError.context)
         console.error('❌ Function data (error details):', functionData)
         
-        // Extract detailed error message
-        const errorMsg = functionData?.error || functionData?.message || functionData?.hint || functionError.message || 'Failed to create checkout session'
-        const errorHint = functionData?.hint ? `\n${functionData.hint}` : ''
+        // Try to get the response body for better error details
+        let errorMessage = 'Failed to create checkout session'
         
-        throw new Error(errorMsg + errorHint)
+        if (functionError.context?.body) {
+          try {
+            const errorBody = await functionError.context.text()
+            console.error('❌ Response body:', errorBody)
+            const errorJson = JSON.parse(errorBody)
+            errorMessage = errorJson.error || errorJson.message || errorMessage
+          } catch (e) {
+            console.error('Could not parse error response:', e)
+          }
+        }
+        
+        if (!errorMessage || errorMessage === 'Failed to create checkout session') {
+          errorMessage = functionData?.error || functionData?.message || functionError.message || errorMessage
+        }
+        
+        // Check for common issues
+        if (errorMessage.includes('Missing required environment variables') || 
+            errorMessage.includes('Stripe is not configured')) {
+          errorMessage += '\n\n⚠️ Server configuration issue: Please contact the administrator to configure Stripe API keys.'
+        }
+        
+        throw new Error(errorMessage)
       }
 
       if (!functionData?.sessionId) {

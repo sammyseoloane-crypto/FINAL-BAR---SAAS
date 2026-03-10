@@ -166,12 +166,28 @@
     gap: 15px;
   }
 
+  .nav-brand {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dashboard-content {
+    padding: 20px 15px;
+  }
+
   .dashboard-header h2 {
     font-size: 2em;
   }
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .btn-signout {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 16px;
   }
 }
 
@@ -180,11 +196,28 @@
     font-size: 1.5em;
   }
 
+  .dashboard-header {
+    margin-bottom: 24px;
+  }
+
   .dashboard-header h2 {
     font-size: 1.75em;
   }
 
+  .dashboard-header p {
+    font-size: 1em;
+  }
+
   .dashboard-card {
-    padding: 20px;
+    padding: 20px 16px;
+  }
+
+  .card-icon {
+    font-size: 2.5em;
+  }
+
+  .btn-card {
+    padding: 10px 20px;
+    font-size: 16px;
   }
 }

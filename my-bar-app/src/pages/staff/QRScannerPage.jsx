@@ -13,10 +13,13 @@ const QRScannerPage = () => {
   const { userProfile } = useAuth();
   const [scanResult, setScanResult] = useState(null);
   const [scanHistory, setScanHistory] = useState([]);
+  const [showScanner, setShowScanner] = useState(true);
 
   const handleScan = async (qrCodeString) => {
     try {
+      console.log('[Staff Scanner] 📝 Validating QR Code:', qrCodeString);
       const result = await scanQRCode(qrCodeString, userProfile.id);
+      console.log('[Staff Scanner] 📋 Validation Result:', result);
 
       const scanEntry = {
         timestamp: new Date(),
@@ -27,11 +30,12 @@ const QRScannerPage = () => {
 
       setScanResult(scanEntry);
       setScanHistory(prev => [scanEntry, ...prev].slice(0, 10)); // Keep last 10 scans
+      
+      // Hide scanner after scan
+      setShowScanner(false);
 
-      // Auto-clear result after 5 seconds
-      setTimeout(() => {
-        setScanResult(null);
-      }, 5000);
+      // Don't auto-clear result anymore - let user manually scan again
+      // Removed: setTimeout(() => setScanResult(null), 5000);
     } catch (error) {
       console.error('Error scanning QR code:', error);
       const errorEntry = {
@@ -42,11 +46,29 @@ const QRScannerPage = () => {
       };
       setScanResult(errorEntry);
       setScanHistory(prev => [errorEntry, ...prev].slice(0, 10));
+      
+      // Hide scanner after error too
+      setShowScanner(false);
     }
+  };
+
+  const handleScanAgain = () => {
+    setScanResult(null);
+    setShowScanner(true);
   };
 
   const handleScanError = (errorMessage) => {
     console.error('Scanner error:', errorMessage);
+  };
+
+  const getProductTypeLabel = (type) => {
+    if (!type) return 'Unknown';
+    const typeMap = {
+      'drink': '🍹 Drink',
+      'food': '🍔 Food',
+      'entrance_fee': '🎫 Entrance Fee'
+    };
+    return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1);
   };
 
   const formatTime = (date) => {
@@ -64,11 +86,17 @@ const QRScannerPage = () => {
         color: '#155724',
         border: '2px solid #c3e6cb'
       };
+    } else if (scanEntry.result?.expired) {
+      return {
+        background: '#f8d7da',
+        color: '#721c24',
+        border: '2px solid #f5c6cb'
+      };
     } else if (scanEntry.result?.alreadyScanned) {
       return {
-        background: '#fff3cd',
-        color: '#856404',
-        border: '2px solid #ffeaa7'
+        background: '#f8d7da',
+        color: '#721c24',
+        border: '3px solid #dc3545'
       };
     } else if (scanEntry.result?.notConfirmed) {
       return {
@@ -87,7 +115,8 @@ const QRScannerPage = () => {
 
   const getResultIcon = (scanEntry) => {
     if (scanEntry.success) return '✅';
-    if (scanEntry.result?.alreadyScanned) return '⚠️';
+    if (scanEntry.result?.expired) return '⏰';
+    if (scanEntry.result?.alreadyScanned) return '❌';
     if (scanEntry.result?.notConfirmed) return '⏳';
     return '❌';
   };
@@ -149,8 +178,75 @@ const QRScannerPage = () => {
               }}>
                 {scanResult.result?.message || 'Unknown result'}
               </h2>
+              
+              {/* Extra prominent message for already scanned QR codes */}
+              {scanResult.result?.alreadyScanned && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '15px',
+                  background: '#f8d7da',
+                  border: '3px solid #dc3545',
+                  borderRadius: '8px',
+                  fontSize: 'clamp(18px, 4.5vw, 22px)',
+                  fontWeight: '800',
+                  color: '#721c24',
+                  textAlign: 'center'
+                }}>
+                  ❌ INVALID CODE - ALREADY SCANNED ❌
+                  {scanResult.result.data?.scanned_at && (
+                    <div style={{
+                      fontSize: 'clamp(14px, 3.5vw, 16px)',
+                      fontWeight: '600',
+                      marginTop: '10px',
+                      padding: '8px',
+                      background: 'rgba(255,255,255,0.5)',
+                      borderRadius: '4px'
+                    }}>
+                      Previously scanned: {new Date(scanResult.result.data.scanned_at).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Show error details for debugging */}
+              {(scanResult.result?.error || scanResult.result?.notFound) && !scanResult.result?.data && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '15px',
+                  background: 'rgba(220, 53, 69, 0.1)',
+                  border: '2px solid #dc3545',
+                  borderRadius: '8px',
+                  fontSize: 'clamp(13px, 3.2vw, 15px)',
+                  color: '#721c24'
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                    ⚠️ QR Code Not Found in System
+                  </div>
+                  <div style={{ marginBottom: '6px' }}>
+                    Possible reasons:
+                  </div>
+                  <ul style={{ margin: '6px 0', paddingLeft: '20px', lineHeight: '1.6' }}>
+                    <li>Transaction hasn't been confirmed by staff yet</li>
+                    <li>QR code is from a different system</li>
+                    <li>QR code was deleted or is invalid</li>
+                  </ul>
+                  <div style={{ 
+                    marginTop: '10px', 
+                    padding: '8px', 
+                    background: 'rgba(0,0,0,0.05)', 
+                    borderRadius: '4px',
+                    fontSize: 'clamp(11px, 2.8vw, 12px)',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all'
+                  }}>
+                    <strong>Scanned:</strong><br/>
+                    {scanResult.qrCode?.substring(0, 80)}{scanResult.qrCode?.length > 80 ? '...' : ''}
+                  </div>
+                </div>
+              )}
+              
               <p style={{ 
-                margin: 0, 
+                margin: '8px 0 0 0', 
                 fontSize: 'clamp(12px, 3vw, 14px)', 
                 opacity: 0.8 
               }}>
@@ -169,24 +265,37 @@ const QRScannerPage = () => {
                 marginTop: '15px'
               }}
             >
-              <div style={{ marginBottom: '10px' }}>
-                <strong>Customer:</strong>{' '}
-                {scanResult.result.data.users?.full_name || 'Unknown'}
-              </div>
+              {scanResult.result.data.user_profile && (
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>Customer:</strong>{' '}
+                  {scanResult.result.data.user_profile.email || 'Unknown'}
+                </div>
+              )}
               {scanResult.result.data.transactions && (
                 <>
                   <div style={{ marginBottom: '10px' }}>
                     <strong>Product:</strong>{' '}
-                    {scanResult.result.data.transactions.products?.name || 'Unknown'}
+                    {scanResult.result.data.transactions.products?.name || 
+                     scanResult.result.data.transactions.metadata?.product_name || 
+                     'Unknown'}
                   </div>
                   <div style={{ marginBottom: '10px' }}>
-                    <strong>Amount:</strong> $
+                    <strong>Amount:</strong> R
                     {parseFloat(scanResult.result.data.transactions.amount).toFixed(2)}
                   </div>
-                  <div>
+                  <div style={{ marginBottom: '10px' }}>
                     <strong>Type:</strong>{' '}
-                    {scanResult.result.data.transactions.products?.type || 'Unknown'}
+                    {getProductTypeLabel(
+                      scanResult.result.data.transactions.products?.type || 
+                      scanResult.result.data.transactions.metadata?.product_type
+                    )}
                   </div>
+                  {scanResult.result.data.transactions.metadata?.quantity && (
+                    <div>
+                      <strong>Quantity:</strong>{' '}
+                      {scanResult.result.data.transactions.metadata.quantity}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -194,18 +303,57 @@ const QRScannerPage = () => {
         </div>
       )}
 
-      {/* Scanner - Mobile optimized */}
-      <div
-        style={{
-          background: '#fff',
-          padding: 'clamp(16px, 4vw, 30px)',
-          borderRadius: '12px',
-          marginBottom: '24px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}
-      >
-        <QRCodeScanner onScan={handleScan} onError={handleScanError} />
-      </div>
+      {/* Scanner - Mobile optimized - Only show when showScanner is true */}
+      {showScanner ? (
+        <div
+          style={{
+            background: '#fff',
+            padding: 'clamp(16px, 4vw, 30px)',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}
+        >
+          <QRCodeScanner onScan={handleScan} onError={handleScanError} />
+        </div>
+      ) : (
+        /* Scan Again Button - Show when scanner is hidden */
+        <div
+          style={{
+            background: '#fff',
+            padding: 'clamp(16px, 4vw, 30px)',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            textAlign: 'center'
+          }}
+        >
+          <button
+            onClick={handleScanAgain}
+            style={{
+              width: '100%',
+              maxWidth: '400px',
+              padding: '18px 32px',
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#fff',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              minHeight: '64px',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            📸 Scan Another QR Code
+          </button>
+        </div>
+      )}
 
       {/* Scan history - Mobile responsive */}
       {scanHistory.length > 0 && (
@@ -253,12 +401,12 @@ const QRScannerPage = () => {
                     }}>
                       {entry.result?.message || 'Unknown result'}
                     </div>
-                    {entry.result?.data?.users && (
+                    {entry.result?.data?.user_profile && (
                       <div style={{ 
                         fontSize: 'clamp(12px, 3vw, 14px)', 
                         color: '#666' 
                       }}>
-                        {entry.result.data.users.full_name}
+                        {entry.result.data.user_profile.email}
                       </div>
                     )}
                   </div>
@@ -296,10 +444,10 @@ const QRScannerPage = () => {
         </h3>
         <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: '1.8' }}>
           <li>
-            <strong>✅ Access Granted:</strong> Valid QR code. Customer can enter.
+            <strong>✅ Scanned:</strong> Valid QR code. Customer can enter.
           </li>
           <li>
-            <strong>⚠️ Already Scanned:</strong> QR code was used before. Check with customer.
+            <strong>❌ Invalid Code, Already Scanned:</strong> QR code was used before. Deny entry.
           </li>
           <li>
             <strong>⏳ Not Confirmed:</strong> Payment not confirmed yet. Direct to payment desk.

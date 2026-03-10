@@ -208,6 +208,7 @@ export default function ProductsPage() {
                     >
                       <option value="drink">Drink</option>
                       <option value="food">Food</option>
+                      <option value="entrance_fee">Entrance Fee</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -288,6 +289,7 @@ export default function ProductsPage() {
                     >
                       <option value="drink">Drink</option>
                       <option value="food">Food</option>
+                      <option value="entrance_fee">Entrance Fee</option>
                     </select>
                   </div>
                   <div className="form-group">

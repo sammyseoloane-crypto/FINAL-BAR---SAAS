@@ -182,6 +182,7 @@ const ProductsPage = () => {
     if (filter === 'specials') return product.is_special;
     if (filter === 'drinks') return product.type === 'drink';
     if (filter === 'food') return product.type === 'food';
+    if (filter === 'entrance') return product.type === 'entrance_fee';
     return true;
   });
 
@@ -210,7 +211,7 @@ const ProductsPage = () => {
         marginBottom: '20px',
         flexWrap: 'wrap' 
       }}>
-        {['all', 'specials', 'drinks', 'food'].map((filterType) => (
+        {['all', 'specials', 'entrance', 'drinks', 'food'].map((filterType) => (
           <button
             key={filterType}
             onClick={() => setFilter(filterType)}
@@ -295,15 +296,28 @@ const ProductsPage = () => {
 
               {/* Product image */}
               {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
+                <div
                   style={{
                     width: '100%',
                     height: '200px',
-                    objectFit: 'cover'
+                    background: '#f7fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
                   }}
-                />
+                >
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      objectFit: 'contain',
+                      display: 'block'
+                    }}
+                  />
+                </div>
               ) : (
                 <div
                   style={{
@@ -316,7 +330,7 @@ const ProductsPage = () => {
                     fontSize: '48px'
                   }}
                 >
-                  {product.type === 'drink' ? '🍹' : '🍔'}
+                  {product.type === 'drink' ? '🍹' : product.type === 'entrance_fee' ? '🎫' : '🍔'}
                 </div>
               )}
 
@@ -334,12 +348,12 @@ const ProductsPage = () => {
                     fontWeight: '600',
                     textTransform: 'uppercase',
                     borderRadius: '6px',
-                    background: product.type === 'drink' ? '#bee3f8' : '#fbd38d',
-                    color: product.type === 'drink' ? '#2c5282' : '#7c2d12',
+                    background: product.type === 'drink' ? '#bee3f8' : product.type === 'entrance_fee' ? '#d4fc79' : '#fbd38d',
+                    color: product.type === 'drink' ? '#2c5282' : product.type === 'entrance_fee' ? '#2d5016' : '#7c2d12',
                     marginBottom: '12px'
                   }}
                 >
-                  {product.type}
+                  {product.type === 'entrance_fee' ? 'entrance' : product.type}
                 </div>
 
                 {product.description && (

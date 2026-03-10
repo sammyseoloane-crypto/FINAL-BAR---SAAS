@@ -52,6 +52,50 @@ const MyPurchasesPage = () => {
     });
   };
 
+  const isExpired = (qrCode) => {
+    if (!qrCode || !qrCode.created_at) return false;
+    const now = new Date();
+    const createdAt = new Date(qrCode.created_at);
+    const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
+    return hoursSinceCreation > 24;
+  };
+
+  const getDisplayName = (transaction) => {
+    // For event purchases (stored in metadata)
+    if (transaction.type === 'event_entry' && transaction.metadata?.event_name) {
+      return transaction.metadata.event_name;
+    }
+    // For product purchases (from products table)
+    if (transaction.products?.name) {
+      return transaction.products.name;
+    }
+    // Fallback: check metadata for product_name
+    if (transaction.metadata?.product_name) {
+      return transaction.metadata.product_name;
+    }
+    // Last resort: show amount
+    return `Purchase - $${parseFloat(transaction.amount).toFixed(2)}`;
+  };
+
+  const getDisplayType = (transaction) => {
+    if (transaction.type === 'event_entry') {
+      return { label: 'Event', bg: '#e0f2fe', color: '#075985' };
+    }
+    if (transaction.products?.type === 'drink') {
+      return { label: 'Drink', bg: '#bee3f8', color: '#2c5282' };
+    }
+    if (transaction.products?.type === 'food') {
+      return { label: 'Food', bg: '#fbd38d', color: '#7c2d12' };
+    }
+    if (transaction.products?.type === 'entrance_fee') {
+      return { label: 'Entrance', bg: '#d4fc79', color: '#2d5016' };
+    }
+    if (transaction.metadata?.product_type) {
+      return { label: transaction.metadata.product_type, bg: '#e2e8f0', color: '#1a202c' };
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -138,7 +182,7 @@ const MyPurchasesPage = () => {
           </div>
           <div style={{ fontSize: '32px', fontWeight: '700', color: '#667eea' }}>
             {transactions.filter(t => 
-              t.qr_codes?.length > 0 && !t.qr_codes[0].scanned_at
+              t.qr_codes?.length > 0 && !t.qr_codes[0].scanned_at && !isExpired(t.qr_codes[0])
             ).length}
           </div>
         </div>
@@ -174,8 +218,14 @@ const MyPurchasesPage = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div>
                   <h3 style={{ marginBottom: '8px', fontSize: '16px' }}>
-                    {transaction.products?.name || 'Unknown Product'}
+                    {transaction.type === 'event_entry' && '🎉 '}
+                    {getDisplayName(transaction)}
                   </h3>
+                  {transaction.metadata?.event_date && (
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                      📅 {new Date(transaction.metadata.event_date).toLocaleDateString()}
+                    </div>
+                  )}
                   <div style={{ fontSize: '14px', color: '#666' }}>
                     {formatDate(transaction.created_at)}
                   </div>
@@ -188,8 +238,8 @@ const MyPurchasesPage = () => {
                 </div>
               </div>
 
-              {/* Product details */}
-              {transaction.products && (
+              {/* Product/Event details */}
+              {getDisplayType(transaction) && (
                 <div style={{ marginBottom: '12px' }}>
                   <span
                     style={{
@@ -199,22 +249,27 @@ const MyPurchasesPage = () => {
                       fontWeight: '600',
                       textTransform: 'uppercase',
                       borderRadius: '6px',
-                      background: transaction.products.type === 'drink' ? '#bee3f8' : '#fbd38d',
-                      color: transaction.products.type === 'drink' ? '#2c5282' : '#7c2d12'
+                      background: getDisplayType(transaction).bg,
+                      color: getDisplayType(transaction).color
                     }}
                   >
-                    {transaction.products.type}
+                    {getDisplayType(transaction).label}
                   </span>
-                  {transaction.products.description && (
+                  {transaction.products?.description && (
                     <p style={{ fontSize: '14px', color: '#666', marginTop: '8px', margin: 0 }}>
                       {transaction.products.description}
+                    </p>
+                  )}
+                  {transaction.metadata?.quantity && transaction.metadata.quantity > 1 && (
+                    <p style={{ fontSize: '14px', color: '#666', marginTop: '8px', margin: 0 }}>
+                      Quantity: {transaction.metadata.quantity}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* QR Code info */}
-              {transaction.qr_codes && transaction.qr_codes.length > 0 && (
+              {/* QR Code info - only show if not expired */}
+              {transaction.qr_codes && transaction.qr_codes.length > 0 && !isExpired(transaction.qr_codes[0]) && (
                 <div
                   style={{
                     background: '#f7fafc',
@@ -307,7 +362,7 @@ const MyPurchasesPage = () => {
           >
             <h2 style={{ marginBottom: '10px' }}>Your Entry QR Code</h2>
             <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
-              {selectedTransaction.products?.name}
+              {getDisplayName(selectedTransaction)}
             </p>
 
             {selectedTransaction.qr_codes && selectedTransaction.qr_codes.length > 0 && (

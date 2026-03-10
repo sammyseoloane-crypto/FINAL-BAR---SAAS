@@ -84,55 +84,55 @@ async function handleWebhook(req: Request): Promise<Response> {
       // Extract metadata
       const userId = session.metadata?.userId
       const tenantId = session.metadata?.tenantId
-      const cartDataStr = session.metadata?.cartData
 
       if (!userId || !tenantId) {
         console.error('❌ Missing userId or tenantId in metadata')
         throw new Error('Missing required metadata fields')
       }
 
-      if (!cartDataStr) {
-        console.error('❌ No cart data in metadata')
-        throw new Error('No cart data found')
+      // Retrieve line items from the session instead of metadata
+      // This avoids Stripe's 500-character metadata limit
+      console.log('🔍 Fetching line items for session:', session.id)
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
+        expand: ['data.price.product']
+      })
+      
+      console.log('🛒 Line items retrieved:', lineItems.data.length)
+
+      if (!lineItems.data || lineItems.data.length === 0) {
+        console.error('❌ No line items found in session')
+        throw new Error('No line items found')
       }
 
-      const cartData = JSON.parse(cartDataStr)
-      console.log('🛒 Cart items:', cartData.length)
+      // Create transactions from line items
+      const transactions = lineItems.data.map((item: any) => {
+        const productName = item.description || item.price?.product?.name || 'Unknown Product'
+        const unitAmount = item.price?.unit_amount || 0
+        const quantity = item.quantity || 1
+        const totalAmount = (unitAmount / 100) * quantity // Convert from cents to currency
 
-      // Create transactions in database
-      const transactions = cartData.map((item: any) => {
+        // Determine transaction type from product name/description
+        // You can enhance this logic based on your needs
+        const isEvent = productName.toLowerCase().includes('event') || 
+                       productName.toLowerCase().includes('entry')
+
         const baseTransaction = {
           user_id: userId,
           tenant_id: tenantId,
-          amount: item.price * item.quantity,
-          status: 'confirmed', // Mark as confirmed since payment succeeded
+          amount: totalAmount,
+          status: 'confirmed',
           stripe_session_id: session.id,
           stripe_payment_intent: session.payment_intent,
+          type: isEvent ? 'event_entry' : 'product_purchase',
+          metadata: {
+            product_name: productName,
+            quantity: quantity,
+            unit_price: unitAmount / 100,
+            stripe_price_id: item.price?.id,
+          },
         }
 
-        if (item.type === 'event') {
-          return {
-            ...baseTransaction,
-            type: 'event_entry',
-            metadata: {
-              event_id: item.id,
-              event_name: item.name,
-              event_date: item.date,
-              quantity: item.quantity,
-            },
-          }
-        } else {
-          return {
-            ...baseTransaction,
-            product_id: item.id,
-            type: 'product_purchase',
-            metadata: {
-              product_name: item.name,
-              product_type: item.productType,
-              quantity: item.quantity,
-            },
-          }
-        }
+        return baseTransaction
       })
 
       console.log('💾 Inserting transactions...', transactions.length)

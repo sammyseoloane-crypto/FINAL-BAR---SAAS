@@ -40,6 +40,12 @@ h1, h2, h3, h4, h5, h6 {
   padding: 0 20px;
 }
 
+@media (max-width: 768px) {
+  .container {
+    padding: 0 15px;
+  }
+}
+
 .text-center {
   text-align: center;
 }
@@ -129,5 +135,123 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 480px) {
+  h1 { font-size: 1.75em !important; }
+  h2 { font-size: 1.5em !important; }
+  h3 { font-size: 1.25em !important; }
+}
+
+/* Better spacing on mobile */
+@media (max-width: 768px) {
+  * {
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.1);
+  }
+}
+
+/* Responsive tables */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mobile-friendly buttons */
+@media (max-width: 768px) {
+  .btn, button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* Product/Event Grid - Mobile Responsive */
+@media (max-width: 768px) {
+  /* For grid layouts with inline styles */
+  [style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Improved spacing on mobile */
+  [style*="padding: 30px"] {
+    padding: 20px !important;
+  }
+
+  [style*="gap: 24px"] {
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even tighter spacing on small screens */
+  [style*="padding: 20px"] {
+    padding: 12px !important;
+  }
+
+  /* Make images responsive */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Product/Event Cards Mobile Optimization */
+@media (max-width: 768px) {
+  /* Ensure cards stack properly */
+  .product-card,
+  .event-card,
+  [class*="card"] {
+    margin-bottom: 16px;
+  }
+
+  /* Better button spacing on mobile */
+  button[style*="width: 100%"] {
+    margin-top: 8px;
+  }
+}
+
+/* Scrollable tables on mobile */
+@media (max-width: 768px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 100%;
+  }
+}
+
+/* Mobile Navigation Improvements */
+@media (max-width: 768px) {
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Show mobile-only elements */
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Better touch targets */
+  a, button, input[type="button"], input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Toast/Alert Messages - Mobile */
+@media (max-width: 768px) {
+  .toast,
+  .alert {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
   }
 }

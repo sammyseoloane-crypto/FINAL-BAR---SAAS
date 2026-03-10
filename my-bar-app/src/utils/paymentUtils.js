@@ -48,6 +48,8 @@ export const createTransaction = async (tenantId, userId, productId, amount) => 
  */
 export const confirmTransaction = async (transactionId, staffUserId) => {
   try {
+    console.log('[Confirm Transaction] 🔄 Confirming transaction:', transactionId);
+    
     // Start a transaction to update transaction and create QR code
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
@@ -61,6 +63,24 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       .single();
 
     if (txError) throw txError;
+    
+    console.log('[Confirm Transaction] ✅ Transaction confirmed:', transaction);
+
+    // Check if QR code already exists for this transaction (prevent duplicates)
+    const { data: existingQR } = await supabase
+      .from('qr_codes')
+      .select('id, code')
+      .eq('transaction_id', transaction.id)
+      .single();
+    
+    if (existingQR) {
+      console.log('[Confirm Transaction] ⚠️ QR code already exists for transaction:', existingQR);
+      return { 
+        transaction, 
+        qrCode: existingQR, 
+        error: null 
+      };
+    }
 
     // Generate QR code for this transaction
     const qrCodeString = generateQRCode(
@@ -68,6 +88,8 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       transaction.user_id,
       transaction.id
     );
+    
+    console.log('[Confirm Transaction] 🎫 Generated QR code string:', qrCodeString);
 
     const { data: qrCode, error: qrError } = await supabase
       .from('qr_codes')
@@ -81,7 +103,12 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       .select()
       .single();
 
-    if (qrError) throw qrError;
+    if (qrError) {
+      console.error('[Confirm Transaction] ❌ Failed to create QR code:', qrError);
+      throw qrError;
+    }
+    
+    console.log('[Confirm Transaction] ✅ QR code created successfully:', qrCode);
 
     return { 
       transaction, 
@@ -89,7 +116,7 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       error: null 
     };
   } catch (error) {
-    console.error('Error confirming transaction:', error);
+    console.error('[Confirm Transaction] ❌ Error confirming transaction:', error);
     return { transaction: null, qrCode: null, error };
   }
 };
@@ -341,25 +368,73 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
           id,
           status,
           amount,
+          metadata,
+          product_id,
           products (
             name,
             type
           )
-        ),
-        users (
-          id,
-          full_name,
-          email
         )
       `)
       .eq('code', qrCodeString)
       .single();
 
     if (fetchError) {
+      console.log('[QR Scanner] ❌ QR code not found in database');
+      console.log('[QR Scanner] 📝 Scanned code:', qrCodeString);
+      console.log('[QR Scanner] ⚠️ Error:', fetchError);
       return { 
         data: null, 
         error: fetchError,
-        message: 'Invalid QR code' 
+        message: 'Invalid QR code - Not found in system',
+        notFound: true
+      };
+    }
+
+    // Fetch user profile separately (profiles table)
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('id', qrCode.user_id)
+      .single();
+    
+    // Attach user profile to response if found
+    if (userProfile) {
+      qrCode.user_profile = userProfile;
+    }
+    
+    // If transaction has product_id but no product data (join failed), fetch product separately
+    if (qrCode.transactions?.product_id && !qrCode.transactions?.products) {
+      console.log('[QR Scanner] 🔍 Product join failed, fetching product separately...');
+      const { data: product } = await supabase
+        .from('products')
+        .select('name, type')
+        .eq('id', qrCode.transactions.product_id)
+        .single();
+      
+      if (product) {
+        console.log('[QR Scanner] ✅ Product fetched:', product);
+        qrCode.transactions.products = product;
+      } else {
+        console.log('[QR Scanner] ⚠️ Product not found in products table');
+      }
+    }
+    
+    console.log('[QR Scanner] ✅ QR code found in database');
+    console.log('[QR Scanner] 📦 QR Code data:', qrCode);
+    console.log('[QR Scanner] 👤 User profile:', userProfile);
+
+    // Check if QR code has expired (24 hours after creation)
+    const createdAt = new Date(qrCode.created_at);
+    const now = new Date();
+    const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
+    
+    if (hoursSinceCreation > 24) {
+      return { 
+        data: qrCode, 
+        error: null,
+        message: 'QR code has expired (valid for 24 hours only)',
+        expired: true 
       };
     }
 
@@ -368,7 +443,7 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
       return { 
         data: qrCode, 
         error: null,
-        message: 'QR code already scanned',
+        message: 'Invalid Code, Already scanned',
         alreadyScanned: true 
       };
     }
@@ -394,25 +469,44 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
           id,
           status,
           amount,
+          metadata,
+          product_id,
           products (
             name,
             type
           )
-        ),
-        users (
-          id,
-          full_name,
-          email
         )
       `)
       .single();
 
     if (updateError) throw updateError;
+    
+    // If transaction has product_id but no product data (join failed), fetch product separately
+    if (updatedQR.transactions?.product_id && !updatedQR.transactions?.products) {
+      console.log('[QR Scanner] 🔍 Product join failed on update, fetching product separately...');
+      const { data: product } = await supabase
+        .from('products')
+        .select('name, type')
+        .eq('id', updatedQR.transactions.product_id)
+        .single();
+      
+      if (product) {
+        console.log('[QR Scanner] ✅ Product fetched on update:', product);
+        updatedQR.transactions.products = product;
+      } else {
+        console.log('[QR Scanner] ⚠️ Product not found in products table on update');
+      }
+    }
+    
+    // Attach user profile to updated QR (already fetched above)
+    if (userProfile) {
+      updatedQR.user_profile = userProfile;
+    }
 
     return { 
       data: updatedQR, 
       error: null,
-      message: 'Access granted',
+      message: 'Scanned',
       success: true 
     };
   } catch (error) {

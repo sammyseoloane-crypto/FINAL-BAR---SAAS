@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../supabaseClient'
 import { useAuth } from '../../contexts/AuthContext'
+import { confirmTransaction } from '../../utils/paymentUtils'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../owner/Pages.css'
 
@@ -18,7 +19,7 @@ export default function PaymentsPage() {
     try {
       let query = supabase
         .from('transactions')
-        .select('*, users(email), products(name)')
+        .select('*, products(name)')
         .eq('tenant_id', userProfile.tenant_id)
         .order('created_at', { ascending: false })
 
@@ -29,6 +30,30 @@ export default function PaymentsPage() {
       const { data, error } = await query
 
       if (error) throw error
+      
+      // Fetch user profiles separately (no custom 'users' table, using profiles)
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(t => t.user_id).filter(Boolean))]
+        
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, email')
+            .in('user_id', userIds)
+          
+          // Create a map for quick lookup
+          const profileMap = {}
+          profiles?.forEach(p => {
+            profileMap[p.user_id] = p
+          })
+          
+          // Merge profile data into transactions
+          data.forEach(trans => {
+            trans.users = profileMap[trans.user_id] || null
+          })
+        }
+      }
+      
       setTransactions(data || [])
     } catch (error) {
       console.error('Error fetching transactions:', error)
@@ -39,49 +64,21 @@ export default function PaymentsPage() {
 
   const confirmPayment = async (transactionId) => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .update({
-          status: 'confirmed',
-          confirmed_by: user.id,
-          confirmed_at: new Date().toISOString()
-        })
-        .eq('id', transactionId)
-
-      if (error) throw error
-
-      // Generate QR code for this transaction
-      await generateQRCode(transactionId)
-
-      alert('Payment confirmed successfully!')
-      fetchTransactions()
+      console.log('[Payments Page] Confirming payment for transaction:', transactionId);
+      
+      // Use the proper utility function which creates QR code automatically
+      const result = await confirmTransaction(transactionId, user.id);
+      
+      if (result.error) {
+        throw result.error;
+      }
+      
+      console.log('[Payments Page] ✅ Payment confirmed, QR code created:', result.qrCode);
+      alert('Payment confirmed successfully! QR code generated.');
+      fetchTransactions();
     } catch (error) {
-      alert('Error confirming payment: ' + error.message)
-    }
-  }
-
-  const generateQRCode = async (transactionId) => {
-    try {
-      // Generate unique code
-      const code = `BAR-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-
-      const { data: transaction } = await supabase
-        .from('transactions')
-        .select('user_id')
-        .eq('id', transactionId)
-        .single()
-
-      const { error } = await supabase
-        .from('qr_codes')
-        .insert([{
-          transaction_id: transactionId,
-          user_id: transaction.user_id,
-          code: code
-        }])
-
-      if (error) throw error
-    } catch (error) {
-      console.error('Error generating QR code:', error)
+      console.error('[Payments Page] ❌ Error confirming payment:', error);
+      alert('Error confirming payment: ' + error.message);
     }
   }
 

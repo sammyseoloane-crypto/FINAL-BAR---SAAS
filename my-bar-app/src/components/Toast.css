@@ -99,5 +99,28 @@
     left: 10px;
     min-width: auto;
     max-width: none;
+    padding: 14px 16px;
+  }
+
+  .toast-message {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast {
+    top: 60px;
+    padding: 12px 14px;
+  }
+
+  .toast-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  .toast-message {
+    font-size: 14px;
   }
 }

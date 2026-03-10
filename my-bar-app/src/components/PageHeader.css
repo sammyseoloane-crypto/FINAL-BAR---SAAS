@@ -76,6 +76,12 @@
   .page-header-nav {
     padding: 12px 15px;
     flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .page-header-left {
+    flex: 1;
+    min-width: 0;
   }
 
   .page-header-brand {
@@ -84,11 +90,46 @@
 
   .page-header-company {
     font-size: 0.85em;
+    padding: 4px 10px;
+  }
+
+  .page-header-right {
+    gap: 8px;
   }
 
   .btn-page-home,
   .btn-page-signout {
-    padding: 6px 12px;
-    font-size: 0.85em;
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header-nav {
+    padding: 10px;
+  }
+
+  .page-header-left {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .page-header-brand {
+    font-size: 1.1em;
+  }
+
+  .page-header-company {
+    font-size: 0.8em;
+  }
+
+  .page-header-right {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .btn-page-home,
+  .btn-page-signout {
+    flex: 1;
+    text-align: center;
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import './Auth.css'
@@ -6,12 +6,22 @@ import './Auth.css'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const [error, setError] = useState('') 
+  const [submitting, setSubmitting] = useState(false)
+  const { signIn, user, userProfile, loading } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const redirectTo = useMemo(() => searchParams.get('redirect') || '/dashboard', [searchParams])
+  const hasRedirected = useRef(false)
+
+  // Redirect if already logged in
+  useEffect(() => {
+    // Only redirect if we have a user AND their profile is loaded (or loading is done)
+    if (user && userProfile && !hasRedirected.current) {
+      hasRedirected.current = true
+      navigate(redirectTo, { replace: true })
+    }
+  }, [user, userProfile, redirectTo, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,18 +31,26 @@ export default function Login() {
       return
     }
 
-    setLoading(true)
+    setSubmitting(true)
     setError('')
 
     const { error: signInError } = await signIn(email, password)
 
     if (signInError) {
-      setError(signInError.message)
-      setLoading(false)
-    } else {
-      // Redirect will be handled by the useEffect in App.jsx
-      navigate(redirectTo, { replace: true })
+      console.error('Login error:', signInError)
+      
+      // Provide user-friendly error messages
+      if (signInError.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials.')
+      } else if (signInError.message.includes('Email not confirmed')) {
+        setError('Please verify your email address before signing in. Check your inbox for the confirmation link.')
+      } else {
+        setError(signInError.message)
+      }
+      
+      setSubmitting(false)
     }
+    // Don't navigate here - let the useEffect handle it when user state updates
   }
 
   return (
@@ -59,7 +77,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              disabled={loading}
+              disabled={submitting}
               required
             />
           </div>
@@ -72,13 +90,13 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              disabled={loading}
+              disabled={submitting}
               required
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
