@@ -401,6 +401,37 @@
     width: 100%;
   }
 
+  /* Table scrolling on mobile */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: -16px;
+    padding: 16px;
+  }
+
+  .table-responsive .data-table {
+    min-width: 600px;
+  }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 1em;
+}
+
+@media (max-width: 768px) {
+  .empty-state {
+    padding: 30px 15px;
+    width: 100%;
+  }
+
   .status-badge {
     font-size: 0.7em;
     padding: 3px 8px;

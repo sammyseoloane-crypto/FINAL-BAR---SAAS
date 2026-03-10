@@ -107,6 +107,62 @@ const styles = `
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
+
+  /* Mobile Responsive Styles */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      padding: 15px 10px;
+    }
+
+    .stat-icon {
+      font-size: 2em;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 1.5em;
+      margin: 5px 0;
+    }
+
+    .stat-label {
+      font-size: 0.8em;
+    }
+
+    .chart-container {
+      height: 250px !important;
+      margin-bottom: 15px;
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table {
+      min-width: 600px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .stat-card {
+      padding: 12px;
+    }
+
+    .stat-value {
+      font-size: 1.3em;
+    }
+  }
 `
 
 export default function ReportsPage() {
@@ -508,7 +564,40 @@ export default function ReportsPage() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top'
+        position: 'top',
+        labels: {
+          boxWidth: 12,
+          padding: 10,
+          font: {
+            size: window.innerWidth < 768 ? 10 : 12
+          }
+        }
+      },
+      tooltip: {
+        titleFont: {
+          size: window.innerWidth < 768 ? 11 : 12
+        },
+        bodyFont: {
+          size: window.innerWidth < 768 ? 10 : 12
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          font: {
+            size: window.innerWidth < 768 ? 9 : 11
+          },
+          maxRotation: window.innerWidth < 768 ? 45 : 0,
+          minRotation: window.innerWidth < 768 ? 45 : 0
+        }
+      },
+      y: {
+        ticks: {
+          font: {
+            size: window.innerWidth < 768 ? 9 : 11
+          }
+        }
       }
     }
   }
@@ -517,11 +606,11 @@ export default function ReportsPage() {
     <DashboardLayout>
       <style>{styles}</style>
       <div className="page-content">
-        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
             <h2>📊 Business Analytics & Reports</h2>
             <p>Real-time insights into your bar's performance</p>
-            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.9em' }}>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.9em', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ 
                   width: '10px', 
@@ -539,7 +628,7 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <button 
               onClick={() => {
                 fetchAllAnalytics()
@@ -643,7 +732,7 @@ export default function ReportsPage() {
             )}
 
             {/* Charts Row */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth < 768 ? '1fr' : '1fr 1fr', gap: '20px', marginTop: '20px' }}>
               {/* Top Products */}
               {productAnalytics.length > 0 && (
                 <div className="card">
@@ -676,17 +765,18 @@ export default function ReportsPage() {
                   <h3>📦 Product Performance</h3>
                 </div>
                 <div className="card-body">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Type</th>
-                        <th>Quantity Sold</th>
-                        <th>Revenue</th>
-                        <th>Revenue %</th>
-                        <th>Quantity %</th>
-                      </tr>
-                    </thead>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th>Type</th>
+                          <th>Quantity Sold</th>
+                          <th>Revenue</th>
+                          <th>Revenue %</th>
+                          <th>Quantity %</th>
+                        </tr>
+                      </thead>
                     <tbody>
                       {productAnalytics.map((product, index) => (
                         <tr key={index}>
@@ -725,9 +815,10 @@ export default function ReportsPage() {
                           </td>
                           <td>{product.quantityPercentage}%</td>
                         </tr>
-                      ))}
+                      ))}  
                     </tbody>
                   </table>
+                </div>
                 </div>
               </div>
             )}
@@ -739,7 +830,8 @@ export default function ReportsPage() {
                   <h3>🎉 Event Performance</h3>
                 </div>
                 <div className="card-body">
-                  <table className="data-table">
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="data-table">
                     <thead>
                       <tr>
                         <th>Event</th>
@@ -760,6 +852,7 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </div>
             )}
 
@@ -774,7 +867,8 @@ export default function ReportsPage() {
                     <p>No transactions in selected period</p>
                   </div>
                 ) : (
-                  <table className="data-table">
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="data-table">
                     <thead>
                       <tr>
                         <th>Date</th>
@@ -800,6 +894,7 @@ export default function ReportsPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
                 )}
               </div>
             </div>
