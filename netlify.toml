@@ -1,6 +1,7 @@
 [build]
+  base = "my-bar-app"
   command = "npm run build"
-  publish = "dist"
+  publish = "my-bar-app/dist"
 
 [[redirects]]
   from = "/*"
