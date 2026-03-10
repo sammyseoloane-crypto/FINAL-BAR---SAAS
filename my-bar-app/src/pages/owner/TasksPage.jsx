@@ -38,12 +38,29 @@ export default function TasksPage() {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('*, users(email), locations(name)')
+        .select('*, locations(name)')
         .eq('tenant_id', userProfile.tenant_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setTasks(data || [])
+
+      // Fetch user emails separately from profiles
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(t => t.assigned_to).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, email')
+          .in('user_id', userIds)
+
+        const profileMap = profiles?.reduce((acc, p) => ({ ...acc, [p.user_id]: p }), {}) || {}
+        const tasksWithUsers = data.map(t => ({
+          ...t,
+          users: profileMap[t.assigned_to] || null
+        }))
+        setTasks(tasksWithUsers)
+      } else {
+        setTasks(data || [])
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error)
     } finally {

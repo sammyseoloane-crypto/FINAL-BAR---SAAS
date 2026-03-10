@@ -51,9 +51,9 @@ export default function TaskStatistics() {
 
       // Get staff statistics
       const { data: staffData, error: staffError } = await supabase
-        .from('users')
+        .from('profiles')
         .select(`
-          id,
+          user_id,
           email,
           tasks:tasks(status)
         `)

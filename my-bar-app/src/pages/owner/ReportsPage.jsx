@@ -68,13 +68,30 @@ export default function ReportsPage() {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select('*, users(email), products(name)')
+        .select('*, products(name)')
         .eq('tenant_id', userProfile.tenant_id)
         .order('created_at', { ascending: false })
         .limit(10)
 
       if (error) throw error
-      setRecentTransactions(data || [])
+
+      // Fetch user emails separately from profiles
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(t => t.user_id).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, email')
+          .in('user_id', userIds)
+
+        const profileMap = profiles?.reduce((acc, p) => ({ ...acc, [p.user_id]: p }), {}) || {}
+        const transactionsWithUsers = data.map(t => ({
+          ...t,
+          users: profileMap[t.user_id] || null
+        }))
+        setRecentTransactions(transactionsWithUsers)
+      } else {
+        setRecentTransactions(data || [])
+      }
     } catch (error) {
       console.error('Error fetching transactions:', error)
     }
