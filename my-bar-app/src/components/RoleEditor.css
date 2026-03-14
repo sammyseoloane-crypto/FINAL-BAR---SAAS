@@ -1,0 +1,99 @@
+/* Role Editor Component Styles */
+
+.role-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f9f9f9;
+}
+
+.role-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-selector label {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.role-select {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.role-select:hover {
+  border-color: #007bff;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.role-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.role-confirm {
+  padding: 10px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+}
+
+.warning-text {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #856404;
+}
+
+.confirm-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.role-description {
+  font-style: italic;
+  color: #666;
+}
+
+.role-description small {
+  font-size: 12px;
+}
+
+/* Inline usage in tables */
+.data-table .role-editor {
+  margin: 5px 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.data-table .role-selector {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.data-table .role-select {
+  width: 100%;
+  max-width: 200px;
+}

@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../../supabaseClient'
-import { useAuth } from '../../contexts/AuthContext'
-import DashboardLayout from '../../components/DashboardLayout'
-import './Pages.css'
+import { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
+import DashboardLayout from '../../components/DashboardLayout';
+import './Pages.css';
 
 export default function ProductsPage() {
-  const { userProfile } = useAuth()
-  const [products, setProducts] = useState([])
-  const [locations, setLocations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
+  const { userProfile } = useAuth();
+  const [products, setProducts] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -18,68 +18,82 @@ export default function ProductsPage() {
     description: '',
     location_id: '',
     is_special: false,
-    available: true
-  })
+    available: true,
+  });
 
   useEffect(() => {
-    fetchProducts()
-    fetchLocations()
-  }, [])
+    fetchProducts();
+    fetchLocations();
+  }, []);
 
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*, locations(name)')
+        .select('*, locations!location_id(name)')
         .eq('tenant_id', userProfile.tenant_id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
-      setProducts(data || [])
+      if (error) {
+        throw error;
+      }
+      setProducts(data || []);
     } catch (error) {
-      console.error('Error fetching products:', error)
+      console.error('Error fetching products:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchLocations = async () => {
     try {
-      const { data, error} = await supabase
+      const { data, error } = await supabase
         .from('locations')
         .select('id, name')
-        .eq('tenant_id', userProfile.tenant_id)
+        .eq('tenant_id', userProfile.tenant_id);
 
-      if (error) throw error
-      setLocations(data || [])
+      if (error) {
+        throw error;
+      }
+      setLocations(data || []);
     } catch (error) {
-      console.error('Error fetching locations:', error)
+      console.error('Error fetching locations:', error);
     }
-  }
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('products')
-        .insert([{
+      const { error } = await supabase.from('products').insert([
+        {
           tenant_id: userProfile.tenant_id,
           ...formData,
-          price: parseFloat(formData.price)
-        }])
+          price: parseFloat(formData.price),
+        },
+      ]);
 
-      if (error) throw error
-      
-      setFormData({ name: '', price: '', type: 'drink', description: '', location_id: '', is_special: false, available: true })
-      setShowForm(false)
-      fetchProducts()
+      if (error) {
+        throw error;
+      }
+
+      setFormData({
+        name: '',
+        price: '',
+        type: 'drink',
+        description: '',
+        location_id: '',
+        is_special: false,
+        available: true,
+      });
+      setShowForm(false);
+      fetchProducts();
     } catch (error) {
-      alert('Error creating product: ' + error.message)
+      alert(`Error creating product: ${error.message}`);
     }
-  }
+  };
 
   const handleEdit = (product) => {
-    setEditingId(product.id)
+    setEditingId(product.id);
     setFormData({
       name: product.name,
       price: product.price.toString(),
@@ -87,13 +101,13 @@ export default function ProductsPage() {
       description: product.description || '',
       location_id: product.location_id || '',
       is_special: product.is_special,
-      available: product.available
-    })
-    setShowForm(false) // Close new product form if open
-  }
+      available: product.available,
+    });
+    setShowForm(false); // Close new product form if open
+  };
 
   const handleUpdate = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
       const { error } = await supabase
         .from('products')
@@ -104,55 +118,76 @@ export default function ProductsPage() {
           description: formData.description,
           location_id: formData.location_id || null,
           is_special: formData.is_special,
-          available: formData.available
+          available: formData.available,
         })
-        .eq('id', editingId)
+        .eq('id', editingId);
 
-      if (error) throw error
+      if (error) {
+        throw error;
+      }
 
-      alert('Product updated successfully!')
-      setEditingId(null)
-      setFormData({ name: '', price: '', type: 'drink', description: '', location_id: '', is_special: false, available: true })
-      fetchProducts()
+      alert('Product updated successfully!');
+      setEditingId(null);
+      setFormData({
+        name: '',
+        price: '',
+        type: 'drink',
+        description: '',
+        location_id: '',
+        is_special: false,
+        available: true,
+      });
+      fetchProducts();
     } catch (error) {
-      alert('Error updating product: ' + error.message)
+      alert(`Error updating product: ${error.message}`);
     }
-  }
+  };
 
   const handleCancelEdit = () => {
-    setEditingId(null)
-    setFormData({ name: '', price: '', type: 'drink', description: '', location_id: '', is_special: false, available: true })
-  }
+    setEditingId(null);
+    setFormData({
+      name: '',
+      price: '',
+      type: 'drink',
+      description: '',
+      location_id: '',
+      is_special: false,
+      available: true,
+    });
+  };
 
   const toggleAvailable = async (id, currentStatus) => {
     try {
       const { error } = await supabase
         .from('products')
         .update({ available: !currentStatus })
-        .eq('id', id)
+        .eq('id', id);
 
-      if (error) throw error
-      fetchProducts()
+      if (error) {
+        throw error;
+      }
+      fetchProducts();
     } catch (error) {
-      alert('Error updating product: ' + error.message)
+      alert(`Error updating product: ${error.message}`);
     }
-  }
+  };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    if (!confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
+      const { error } = await supabase.from('products').delete().eq('id', id);
 
-      if (error) throw error
-      fetchProducts()
+      if (error) {
+        throw error;
+      }
+      fetchProducts();
     } catch (error) {
-      alert('Error deleting product: ' + error.message)
+      alert(`Error deleting product: ${error.message}`);
     }
-  }
+  };
 
   return (
     <DashboardLayout>
@@ -184,7 +219,7 @@ export default function ProductsPage() {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -194,7 +229,7 @@ export default function ProductsPage() {
                       type="number"
                       step="0.01"
                       value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       required
                     />
                   </div>
@@ -204,7 +239,7 @@ export default function ProductsPage() {
                     <label>Type *</label>
                     <select
                       value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     >
                       <option value="drink">Drink</option>
                       <option value="food">Food</option>
@@ -215,11 +250,13 @@ export default function ProductsPage() {
                     <label>Location</label>
                     <select
                       value={formData.location_id}
-                      onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     >
                       <option value="">All locations</option>
                       {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -228,7 +265,7 @@ export default function ProductsPage() {
                   <label>Description</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
@@ -236,14 +273,20 @@ export default function ProductsPage() {
                     <input
                       type="checkbox"
                       checked={formData.is_special}
-                      onChange={(e) => setFormData({...formData, is_special: e.target.checked})}
-                    />
-                    {' '}Special item
+                      onChange={(e) => setFormData({ ...formData, is_special: e.target.checked })}
+                    />{' '}
+                    Special item
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit" className="btn btn-primary">Add Product</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                  <button type="submit" className="btn btn-primary">
+                    Add Product
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowForm(false)}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -265,7 +308,7 @@ export default function ProductsPage() {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -275,7 +318,7 @@ export default function ProductsPage() {
                       type="number"
                       step="0.01"
                       value={formData.price}
-                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       required
                     />
                   </div>
@@ -285,7 +328,7 @@ export default function ProductsPage() {
                     <label>Type *</label>
                     <select
                       value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     >
                       <option value="drink">Drink</option>
                       <option value="food">Food</option>
@@ -296,11 +339,13 @@ export default function ProductsPage() {
                     <label>Location</label>
                     <select
                       value={formData.location_id}
-                      onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     >
                       <option value="">All locations</option>
                       {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -309,7 +354,7 @@ export default function ProductsPage() {
                   <label>Description</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="form-group">
@@ -317,13 +362,15 @@ export default function ProductsPage() {
                     <input
                       type="checkbox"
                       checked={formData.is_special}
-                      onChange={(e) => setFormData({...formData, is_special: e.target.checked})}
-                    />
-                    {' '}Special item
+                      onChange={(e) => setFormData({ ...formData, is_special: e.target.checked })}
+                    />{' '}
+                    Special item
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit" className="btn btn-primary">Update Product</button>
+                  <button type="submit" className="btn btn-primary">
+                    Update Product
+                  </button>
                   <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>
                     Cancel
                   </button>
@@ -361,40 +408,39 @@ export default function ProductsPage() {
                     <tr key={product.id}>
                       <td>{product.name}</td>
                       <td>
-                        <span className="status-badge status-active">
-                          {product.type}
-                        </span>
+                        <span className="status-badge status-active">{product.type}</span>
                       </td>
                       <td>R {product.price}</td>
                       <td>{product.locations?.name || 'All'}</td>
                       <td>{product.is_special ? '⭐' : '-'}</td>
                       <td>
-                        <span className={`status-badge status-${product.available ? 'active' : 'inactive'}`}>
+                        <span
+                          className={`status-badge status-${product.available ? 'active' : 'inactive'}`}
+                        >
                           {product.available ? 'Available' : 'Unavailable'}
                         </span>
                       </td>
                       <td>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => handleEdit(product)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => toggleAvailable(product.id, product.available)}
-                        >
-                          Toggle
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => handleDelete(product.id)}
-                        >
-                          Delete
-                        </button>
+                        <div className="action-buttons">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleEdit(product)}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => toggleAvailable(product.id, product.available)}
+                          >
+                            {product.available ? '⏸️ Hide' : '▶️ Show'}
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDelete(product.id)}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -405,5 +451,5 @@ export default function ProductsPage() {
         )}
       </div>
     </DashboardLayout>
-  )
+  );
 }

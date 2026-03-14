@@ -25,10 +25,13 @@
 
 .page-header-company {
   font-size: 0.95em;
-  color: #667eea;
-  font-weight: 600;
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
   padding: 6px 12px;
-  background: #f0f2ff;
+  border: 2px solid rgba(212, 175, 55, 0.3);
   border-radius: 20px;
 }
 
@@ -40,35 +43,43 @@
 
 .btn-page-home,
 .btn-page-signout {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.9em;
   border: 2px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-page-home {
-  background: white;
-  border-color: #e0e0e0;
-  color: #667eea;
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  border-color: rgba(212, 175, 55, 0.3);
+  color: #1a1a2e;
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
 }
 
 .btn-page-home:hover {
-  background: #f0f2ff;
-  border-color: #667eea;
+  background: linear-gradient(135deg, #c9a227 0%, #aa8c2d 100%);
+  border-color: #d4af37;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(212, 175, 55, 0.5);
 }
 
 .btn-page-signout {
-  background: white;
-  border-color: #e0e0e0;
-  color: #666;
+  background: linear-gradient(135deg, #f0f0f0 0%, #e5e5e5 100%);
+  border-color: #d0d0d0;
+  color: #1a1a2e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-page-signout:hover {
-  border-color: #f56565;
-  color: #f56565;
+  border-color: #c0c0c0;
+  background: linear-gradient(135deg, #e5e5e5 0%, #d5d5d5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive */

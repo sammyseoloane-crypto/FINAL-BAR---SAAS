@@ -3,27 +3,22 @@
  * Handles client-side Stripe integration
  */
 
-import { loadStripe } from '@stripe/stripe-js'
+import { loadStripe } from '@stripe/stripe-js';
 
 // Initialize Stripe with publishable key
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-export { stripePromise }
+export { stripePromise };
 
 /**
- * Redirect to Stripe Checkout
- * @param {string} sessionId - Stripe Checkout Session ID
+ * Redirect to Stripe Checkout (Modern approach)
+ * @param {string} checkoutUrl - Direct checkout URL from Stripe session
  */
-export const redirectToCheckout = async (sessionId) => {
-  const stripe = await stripePromise
-  
-  if (!stripe) {
-    throw new Error('Stripe failed to load')
+export const redirectToCheckout = async (checkoutUrl) => {
+  if (!checkoutUrl) {
+    throw new Error('No checkout URL provided');
   }
-
-  const { error } = await stripe.redirectToCheckout({ sessionId })
   
-  if (error) {
-    throw error
-  }
-}
+  // Direct redirect to Stripe hosted checkout page
+  window.location.href = checkoutUrl;
+};

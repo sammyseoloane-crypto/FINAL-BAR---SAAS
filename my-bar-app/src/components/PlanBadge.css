@@ -1,0 +1,77 @@
+/* Plan Badge Styles */
+.plan-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: badgeGlow 3s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+@keyframes badgeGlow {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.plan-trial {
+  background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+  color: white;
+  box-shadow: 
+    0 2px 8px rgba(113, 128, 150, 0.3),
+    0 0 15px rgba(113, 128, 150, 0.1);
+}
+
+.plan-starter {
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  color: white;
+  box-shadow: 
+    0 2px 8px rgba(66, 153, 225, 0.3),
+    0 0 15px rgba(66, 153, 225, 0.1);
+}
+
+.plan-growth {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  box-shadow: 
+    0 2px 8px rgba(72, 187, 120, 0.3),
+    0 0 15px rgba(72, 187, 120, 0.1);
+}
+
+.plan-pro {
+  background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+  color: white;
+  box-shadow: 
+    0 2px 8px rgba(159, 122, 234, 0.4),
+    0 0 15px rgba(159, 122, 234, 0.2);
+}
+
+.plan-enterprise {
+  background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+  color: white;
+  box-shadow: 
+    0 2px 8px rgba(246, 173, 85, 0.4),
+    0 0 15px rgba(246, 173, 85, 0.2);
+}
+
+.plan-loading {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e0 100%);
+  color: #4a5568;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

@@ -1,37 +1,37 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import './Auth.css'
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import './Auth.css';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { resetPassword } = useAuth()
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    e.preventDefault();
+
     if (!email) {
-      setError('Please enter your email')
-      return
+      setError('Please enter your email');
+      return;
     }
 
-    setLoading(true)
-    setError('')
-    setSuccess(false)
+    setLoading(true);
+    setError('');
+    setSuccess(false);
 
-    const { error: resetError } = await resetPassword(email)
+    const { error: resetError } = await resetPassword(email);
 
     if (resetError) {
-      setError(resetError.message)
-      setLoading(false)
+      setError(resetError.message);
+      setLoading(false);
     } else {
-      setSuccess(true)
-      setLoading(false)
+      setSuccess(true);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
@@ -42,11 +42,7 @@ export default function ForgotPassword() {
           <p>Enter your email to receive a password reset link.</p>
         </div>
 
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
+        {error && <div className="alert alert-error">{error}</div>}
 
         {success && (
           <div className="alert alert-success">
@@ -68,11 +64,7 @@ export default function ForgotPassword() {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={loading || success}
-          >
+          <button type="submit" className="btn btn-primary" disabled={loading || success}>
             {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
@@ -84,5 +76,5 @@ export default function ForgotPassword() {
         </div>
       </div>
     </div>
-  )
+  );
 }

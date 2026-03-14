@@ -3,7 +3,7 @@
  * Browse and purchase products, specials, and admission
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -24,10 +24,13 @@ const ProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userProfile]);
 
   const fetchProducts = async () => {
-    if (!userProfile?.tenant_id) return;
+    if (!userProfile?.tenant_id) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -39,7 +42,9 @@ const ProductsPage = () => {
         .order('is_special', { ascending: false })
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -61,22 +66,25 @@ const ProductsPage = () => {
 
   const addItemToCart = (product) => {
     const quantity = getQuantity(product.id);
-    
+
     // Add item to cart with specified quantity
-    addToCart({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      type: 'product',
-      productType: product.type
-    }, quantity);
-    
+    addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        type: 'product',
+        productType: product.type,
+      },
+      quantity,
+    );
+
     // Show success toast
-    setToast({ 
-      type: 'success', 
-      message: `${quantity}x ${product.name} added to cart!` 
+    setToast({
+      type: 'success',
+      message: `${quantity}x ${product.name} added to cart!`,
     });
-    
+
     // Reset quantity to 1
     setQuantities({ ...quantities, [product.id]: 1 });
   };
@@ -84,21 +92,23 @@ const ProductsPage = () => {
   // Render quantity selector component
   const renderQuantitySelector = (product) => {
     const quantity = getQuantity(product.id);
-    
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <span style={{ fontSize: '24px', fontWeight: '700', color: '#667eea' }}>
-          ${parseFloat(product.price).toFixed(2)}
+        <span style={{ fontSize: '24px', fontWeight: '700', color: '#d4af37' }}>
+          R{parseFloat(product.price).toFixed(2)}
         </span>
-        
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          background: '#f7fafc',
-          padding: '8px',
-          borderRadius: '8px'
-        }}>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: '#f7fafc',
+            padding: '8px',
+            borderRadius: '8px',
+          }}
+        >
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -114,24 +124,26 @@ const ProductsPage = () => {
               borderRadius: '6px',
               cursor: quantity > 1 ? 'pointer' : 'not-allowed',
               background: '#fff',
-              color: '#667eea',
+              color: '#d4af37',
               opacity: quantity <= 1 ? 0.5 : 1,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
             }}
           >
             −
           </button>
-          
-          <span style={{ 
-            fontSize: '14px', 
-            fontWeight: '600',
-            minWidth: '50px',
-            textAlign: 'center',
-            color: '#4a5568'
-          }}>
+
+          <span
+            style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              minWidth: '50px',
+              textAlign: 'center',
+              color: '#4a5568',
+            }}
+          >
             Qty {quantity}
           </span>
-          
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -147,14 +159,14 @@ const ProductsPage = () => {
               borderRadius: '6px',
               cursor: quantity < 99 ? 'pointer' : 'not-allowed',
               background: '#fff',
-              color: '#667eea',
+              color: '#d4af37',
               opacity: quantity >= 99 ? 0.5 : 1,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
             }}
           >
             +
           </button>
-          
+
           <button
             onClick={() => addItemToCart(product)}
             style={{
@@ -162,12 +174,12 @@ const ProductsPage = () => {
               fontSize: '14px',
               fontWeight: '600',
               color: '#fff',
-              background: '#667eea',
+              background: '#d4af37',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              flex: 1
+              flex: 1,
             }}
           >
             Add to Cart
@@ -177,12 +189,22 @@ const ProductsPage = () => {
     );
   };
 
-  const filteredProducts = products.filter(product => {
-    if (filter === 'all') return true;
-    if (filter === 'specials') return product.is_special;
-    if (filter === 'drinks') return product.type === 'drink';
-    if (filter === 'food') return product.type === 'food';
-    if (filter === 'entrance') return product.type === 'entrance_fee';
+  const filteredProducts = products.filter((product) => {
+    if (filter === 'all') {
+      return true;
+    }
+    if (filter === 'specials') {
+      return product.is_special;
+    }
+    if (filter === 'drinks') {
+      return product.type === 'drink';
+    }
+    if (filter === 'food') {
+      return product.type === 'food';
+    }
+    if (filter === 'entrance') {
+      return product.type === 'entrance_fee';
+    }
     return true;
   });
 
@@ -204,198 +226,210 @@ const ProductsPage = () => {
           Browse and purchase admission, drinks, and food items
         </p>
 
-      {/* Filter buttons */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '10px', 
-        marginBottom: '20px',
-        flexWrap: 'wrap' 
-      }}>
-        {['all', 'specials', 'entrance', 'drinks', 'food'].map((filterType) => (
-          <button
-            key={filterType}
-            onClick={() => setFilter(filterType)}
-            style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              fontWeight: '500',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              background: filter === filterType ? '#667eea' : '#f7fafc',
-              color: filter === filterType ? '#fff' : '#4a5568',
-              transition: 'all 0.2s'
-            }}
-          >
-            {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Products grid */}
-      {filteredProducts.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 20px',
-          background: '#f7fafc',
-          borderRadius: '12px'
-        }}>
-          <p style={{ fontSize: '18px', color: '#666' }}>
-            No products available at the moment
-          </p>
-        </div>
-      ) : (
+        {/* Filter buttons */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '20px'
+            display: 'flex',
+            gap: '10px',
+            marginBottom: '20px',
+            flexWrap: 'wrap',
           }}
         >
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
+          {['all', 'specials', 'entrance', 'drinks', 'food'].map((filterType) => (
+            <button
+              key={filterType}
+              onClick={() => setFilter(filterType)}
               style={{
-                background: '#fff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                position: 'relative'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                padding: '8px 16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                background: filter === filterType ? '#d4af37' : '#f7fafc',
+                color: filter === filterType ? '#fff' : '#4a5568',
+                transition: 'all 0.2s',
               }}
             >
-              {/* Special badge */}
-              {product.is_special && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '12px',
-                    right: '12px',
-                    background: '#f6ad55',
-                    color: '#fff',
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                    zIndex: 1
-                  }}
-                >
-                  Special
-                </div>
-              )}
-
-              {/* Product image */}
-              {product.image_url ? (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '200px',
-                    background: '#f7fafc',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden'
-                  }}
-                >
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      objectFit: 'contain',
-                      display: 'block'
-                    }}
-                  />
-                </div>
-              ) : (
-                <div
-                  style={{
-                    width: '100%',
-                    height: '200px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '48px'
-                  }}
-                >
-                  {product.type === 'drink' ? '🍹' : product.type === 'entrance_fee' ? '🎫' : '🍔'}
-                </div>
-              )}
-
-              {/* Product details */}
-              <div style={{ padding: '16px' }}>
-                <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>
-                  {product.name}
-                </h3>
-
-                <div
-                  style={{
-                    display: 'inline-block',
-                    padding: '4px 8px',
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    borderRadius: '6px',
-                    background: product.type === 'drink' ? '#bee3f8' : product.type === 'entrance_fee' ? '#d4fc79' : '#fbd38d',
-                    color: product.type === 'drink' ? '#2c5282' : product.type === 'entrance_fee' ? '#2d5016' : '#7c2d12',
-                    marginBottom: '12px'
-                  }}
-                >
-                  {product.type === 'entrance_fee' ? 'entrance' : product.type}
-                </div>
-
-                {product.description && (
-                  <p
-                    style={{
-                      fontSize: '14px',
-                      color: '#666',
-                      marginBottom: '16px',
-                      lineHeight: '1.5'
-                    }}
-                  >
-                    {product.description}
-                  </p>
-                )}
-
-                <div style={{ marginTop: '16px' }}>
-                  {renderQuantitySelector(product)}
-                </div>
-              </div>
-            </div>
+              {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+            </button>
           ))}
         </div>
-      )}
 
-      {/* Help text */}
-      <div
-        style={{
-          marginTop: '40px',
-          padding: '20px',
-          background: '#edf2f7',
-          borderRadius: '8px',
-          fontSize: '14px',
-          color: '#4a5568'
-        }}
-      >
-        <p style={{ margin: 0 }}>
-          💡 <strong>How it works:</strong> Click "Add to Cart" to add items to your cart. 
-          Review your cart and click "Checkout" to create pending transactions.
-          Once staff confirms your payment, you'll receive a QR code for entry. 
-          View your purchases and QR codes in "My Purchases" page.
-        </p>
-      </div>
+        {/* Products grid */}
+        {filteredProducts.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              background: '#f7fafc',
+              borderRadius: '12px',
+            }}
+          >
+            <p style={{ fontSize: '18px', color: '#666' }}>No products available at the moment</p>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '20px',
+            }}
+          >
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                style={{
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  position: 'relative',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                }}
+              >
+                {/* Special badge */}
+                {product.is_special && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      background: '#f6ad55',
+                      color: '#fff',
+                      padding: '4px 12px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      textTransform: 'uppercase',
+                      zIndex: 1,
+                    }}
+                  >
+                    Special
+                  </div>
+                )}
+
+                {/* Product image */}
+                {product.image_url ? (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      background: '#f7fafc',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                        objectFit: 'contain',
+                        display: 'block',
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '200px',
+                      background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '48px',
+                    }}
+                  >
+                    {product.type === 'drink'
+                      ? '🍹'
+                      : product.type === 'entrance_fee'
+                        ? '🎫'
+                        : '🍔'}
+                  </div>
+                )}
+
+                {/* Product details */}
+                <div style={{ padding: '16px' }}>
+                  <h3 style={{ marginBottom: '8px', fontSize: '18px' }}>{product.name}</h3>
+
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      borderRadius: '6px',
+                      background:
+                        product.type === 'drink'
+                          ? '#bee3f8'
+                          : product.type === 'entrance_fee'
+                            ? '#d4fc79'
+                            : '#fbd38d',
+                      color:
+                        product.type === 'drink'
+                          ? '#2c5282'
+                          : product.type === 'entrance_fee'
+                            ? '#2d5016'
+                            : '#7c2d12',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    {product.type === 'entrance_fee' ? 'entrance' : product.type}
+                  </div>
+
+                  {product.description && (
+                    <p
+                      style={{
+                        fontSize: '14px',
+                        color: '#666',
+                        marginBottom: '16px',
+                        lineHeight: '1.5',
+                      }}
+                    >
+                      {product.description}
+                    </p>
+                  )}
+
+                  <div style={{ marginTop: '16px' }}>{renderQuantitySelector(product)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Help text */}
+        <div
+          style={{
+            marginTop: '40px',
+            padding: '20px',
+            background: '#edf2f7',
+            borderRadius: '8px',
+            fontSize: '14px',
+            color: '#4a5568',
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            💡 <strong>How it works:</strong> Click &quot;Add to Cart&quot; to add items to your cart. Review
+            your cart and click &quot;Checkout&quot; to create pending transactions. Once staff confirms your
+            payment, you&apos;ll receive a QR code for entry. View your purchases and QR codes in &quot;My
+            Purchases&quot; page.
+          </p>
+        </div>
       </div>
       <FloatingCartButton onClick={() => navigate('/customer/orders')} />
       {toast && <Toast type={toast.type} message={toast.message} onClose={() => setToast(null)} />}

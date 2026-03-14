@@ -1,0 +1,97 @@
+.tax-calculator {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.tax-calculator.loading {
+  text-align: center;
+  color: #718096;
+  font-size: 0.875rem;
+  padding: 2rem;
+}
+
+.tax-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tax-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.tax-row.subtotal {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tax-breakdown {
+  background: #f7fafc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.tax-item {
+  padding: 0.25rem 0;
+}
+
+.tax-label {
+  color: #4a5568;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tax-description {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: #cbd5e0;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 16px;
+  font-size: 0.7rem;
+  color: #2d3748;
+  cursor: help;
+}
+
+.tax-value {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.875rem;
+}
+
+.tax-row.total-tax {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+}
+
+.tax-row.total-tax .tax-label,
+.tax-row.total-tax .tax-value {
+  font-weight: 600;
+  color: #d4af37;
+}
+
+.tax-row.total {
+  background: #edf2f7;
+  border-radius: 4px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.tax-row.total .tax-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.tax-row.total .tax-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #48bb78;
+}

@@ -1,79 +1,94 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../supabaseClient'
-import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
-import './Cart.css'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import './Cart.css';
 
 export default function Cart({ isOpen, onClose }) {
-  const { user, userProfile } = useAuth()
-  const { cartItems, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } = useCart()
-  const [processing, setProcessing] = useState(false)
-  const navigate = useNavigate()
+  const { user, userProfile } = useAuth();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, getCartTotal, getCartCount } =
+    useCart();
+  const [processing, setProcessing] = useState(false);
+  const navigate = useNavigate();
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    return null;
+  }
 
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
-      alert('Your cart is empty!')
-      return
+      alert('Your cart is empty!');
+      return;
     }
 
-    setProcessing(true)
+    setProcessing(true);
 
     try {
       // Create transactions for all cart items
-      const transactions = cartItems.map(item => {
+      const transactions = cartItems.map((item) => {
         const baseTransaction = {
           user_id: user.id,
           tenant_id: userProfile.tenant_id,
           amount: item.price * item.quantity,
-          status: 'pending'
-        }
+          status: 'pending',
+        };
 
         if (item.type === 'event') {
-          return {
+          const eventTransaction = {
             ...baseTransaction,
+            event_id: item.id,  // Set event_id for event transactions
             type: 'event_entry',
             metadata: {
               event_id: item.id,
               event_name: item.name,
               event_date: item.date,
-              quantity: item.quantity
-            }
-          }
+              quantity: item.quantity,
+            },
+          };
+          console.log('Creating event transaction:', eventTransaction);
+          return eventTransaction;
         } else {
-          return {
+          const productTransaction = {
             ...baseTransaction,
-            product_id: item.id,
+            product_id: item.id,  // Set product_id for product transactions
             type: 'product_purchase',
             metadata: {
               product_name: item.name,
               product_type: item.productType,
-              quantity: item.quantity
-            }
-          }
+              quantity: item.quantity,
+            },
+          };
+          console.log('Creating product transaction:', productTransaction);
+          return productTransaction;
         }
-      })
+      });
 
-      const { error } = await supabase
-        .from('transactions')
-        .insert(transactions)
+      console.log('All transactions to insert:', transactions);
 
-      if (error) throw error
+      const { data, error } = await supabase.from('transactions').insert(transactions).select();
 
-      const total = getCartTotal()
-      alert(`Order placed for R${total.toFixed(2)}! Please pay at the counter to complete your order.`)
-      
-      clearCart()
-      onClose()
-      navigate('/customer/orders')
+      if (error) {
+        console.error('Transaction insert error:', error);
+        throw error;
+      }
+
+      console.log('Inserted transactions:', data);
+
+      const total = getCartTotal();
+      alert(
+        `Order placed for R${total.toFixed(2)}! Please pay at the counter to complete your order.`,
+      );
+
+      clearCart();
+      onClose();
+      navigate('/customer/orders');
     } catch (error) {
-      alert('Error processing checkout: ' + error.message)
+      alert(`Error processing checkout: ${error.message}`);
     } finally {
-      setProcessing(false)
+      setProcessing(false);
     }
-  }
+  };
 
   return (
     <>
@@ -81,7 +96,9 @@ export default function Cart({ isOpen, onClose }) {
       <div className="cart-sidebar">
         <div className="cart-header">
           <h2>🛒 Your Cart</h2>
-          <button className="cart-close" onClick={onClose}>✕</button>
+          <button className="cart-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         <div className="cart-body">
@@ -98,7 +115,8 @@ export default function Cart({ isOpen, onClose }) {
                   <div key={`${item.id}-${item.type}-${index}`} className="cart-item">
                     <div className="cart-item-header">
                       <div className="cart-item-name">
-                        {item.type === 'event' ? '🎉' : item.productType === 'drink' ? '🍸' : '🍕'} {item.name}
+                        {item.type === 'event' ? '🎉' : item.productType === 'drink' ? '🍸' : '🍕'}{' '}
+                        {item.name}
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id, item.type)}
@@ -159,14 +177,12 @@ export default function Cart({ isOpen, onClose }) {
               >
                 🗑️ Clear All Items
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleCheckout}
-                disabled={processing}
-              >
+              <button className="btn btn-primary" onClick={handleCheckout} disabled={processing}>
                 {processing ? 'Processing...' : `Checkout - R${getCartTotal().toFixed(2)}`}
               </button>
-              <small style={{ display: 'block', textAlign: 'center', marginTop: '10px', color: '#666' }}>
+              <small
+                style={{ display: 'block', textAlign: 'center', marginTop: '10px', color: '#666' }}
+              >
                 Pay at the counter to complete your order
               </small>
             </>
@@ -174,5 +190,5 @@ export default function Cart({ isOpen, onClose }) {
         </div>
       </div>
     </>
-  )
+  );
 }

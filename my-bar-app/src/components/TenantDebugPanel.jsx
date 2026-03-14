@@ -1,51 +1,52 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { getTenantInfo } from '../utils/tenantUtils'
-import '../pages/owner/Pages.css'
+import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { getTenantInfo } from '../utils/tenantUtils';
+import '../pages/owner/Pages.css';
 
 /**
  * TenantDebugPanel
  * Shows current tenant information for development/testing
  * Display this component on dashboard pages to verify multi-tenant isolation
- * 
+ *
  * Usage:
  * import TenantDebugPanel from '../components/TenantDebugPanel'
  * <TenantDebugPanel />
  */
 export default function TenantDebugPanel() {
-  const { user, userProfile } = useAuth()
-  const [tenantInfo, setTenantInfo] = useState(null)
-  const [isExpanded, setIsExpanded] = useState(false)
+  const { user, userProfile } = useAuth();
+  const [tenantInfo, setTenantInfo] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Only show in development
-  const isDevelopment = import.meta.env.DEV
+  const isDevelopment = import.meta.env.DEV;
 
   useEffect(() => {
     if (userProfile?.tenant_id) {
-      loadTenantInfo()
+      loadTenantInfo();
     }
-  }, [userProfile])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userProfile]);
 
   const loadTenantInfo = async () => {
-    const info = await getTenantInfo(userProfile.tenant_id)
-    setTenantInfo(info)
-  }
+    const info = await getTenantInfo(userProfile.tenant_id);
+    setTenantInfo(info);
+  };
 
   if (!isDevelopment) {
-    return null // Hide in production
+    return null; // Hide in production
   }
 
   if (!userProfile) {
-    return null
+    return null;
   }
 
   return (
-    <div 
+    <div
       style={{
         position: 'fixed',
-        bottom: '20px',
-        left: '20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        top: '20px',
+        right: '20px',
+        background: 'linear-gradient(135deg, #d4af37 0%, #c9a227 100%)',
         color: 'white',
         borderRadius: '12px',
         padding: isExpanded ? '15px' : '10px',
@@ -54,7 +55,7 @@ export default function TenantDebugPanel() {
         maxWidth: '320px',
         fontSize: '0.85em',
         cursor: isExpanded ? 'default' : 'pointer',
-        transition: 'all 0.3s ease'
+        transition: 'all 0.3s ease',
       }}
       onClick={() => !isExpanded && setIsExpanded(true)}
     >
@@ -69,8 +70,8 @@ export default function TenantDebugPanel() {
             <strong style={{ fontSize: '1.1em' }}>🏢 Tenant Debug Panel</strong>
             <button
               onClick={(e) => {
-                e.stopPropagation()
-                setIsExpanded(false)
+                e.stopPropagation();
+                setIsExpanded(false);
               }}
               style={{
                 background: 'rgba(255,255,255,0.2)',
@@ -79,99 +80,106 @@ export default function TenantDebugPanel() {
                 borderRadius: '4px',
                 padding: '2px 8px',
                 cursor: 'pointer',
-                fontSize: '0.9em'
+                fontSize: '0.9em',
               }}
             >
               ✕
             </button>
           </div>
 
-          <div style={{ 
-            background: 'rgba(255,255,255,0.1)', 
-            padding: '10px', 
-            borderRadius: '8px',
-            marginBottom: '8px'
-          }}>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              padding: '10px',
+              borderRadius: '8px',
+              marginBottom: '8px',
+            }}
+          >
             <div style={{ marginBottom: '6px' }}>
               <strong>Tenant ID:</strong>
-              <div style={{ 
-                fontFamily: 'monospace', 
-                fontSize: '0.85em',
-                marginTop: '2px',
-                wordBreak: 'break-all'
-              }}>
+              <div
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '0.85em',
+                  marginTop: '2px',
+                  wordBreak: 'break-all',
+                }}
+              >
                 {userProfile.tenant_id}
               </div>
             </div>
 
             <div style={{ marginBottom: '6px' }}>
               <strong>Business Name:</strong>
-              <div style={{ marginTop: '2px' }}>
-                {tenantInfo?.name || 'Loading...'}
-              </div>
+              <div style={{ marginTop: '2px' }}>{tenantInfo?.name || 'Loading...'}</div>
             </div>
 
             <div style={{ marginBottom: '6px' }}>
               <strong>Your Role:</strong>
-              <div style={{ 
-                marginTop: '2px',
-                textTransform: 'capitalize',
-                display: 'inline-block',
-                background: 'rgba(255,255,255,0.2)',
-                padding: '2px 8px',
-                borderRadius: '4px'
-              }}>
+              <div
+                style={{
+                  marginTop: '2px',
+                  textTransform: 'capitalize',
+                  display: 'inline-block',
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                }}
+              >
                 {userProfile.role}
               </div>
             </div>
 
             <div>
               <strong>User Email:</strong>
-              <div style={{ fontSize: '0.9em', marginTop: '2px' }}>
-                {user.email}
-              </div>
+              <div style={{ fontSize: '0.9em', marginTop: '2px' }}>{user.email}</div>
             </div>
           </div>
 
           {tenantInfo && (
-            <div style={{ 
-              background: 'rgba(255,255,255,0.1)', 
-              padding: '8px', 
-              borderRadius: '8px',
-              fontSize: '0.85em'
-            }}>
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                padding: '8px',
+                borderRadius: '8px',
+                fontSize: '0.85em',
+              }}
+            >
               <div style={{ marginBottom: '4px' }}>
                 <strong>Subscription:</strong> {tenantInfo.subscription_status}
               </div>
               {tenantInfo.subscription_end && (
                 <div>
-                  <strong>Expires:</strong> {new Date(tenantInfo.subscription_end).toLocaleDateString()}
+                  <strong>Expires:</strong>{' '}
+                  {new Date(tenantInfo.subscription_end).toLocaleDateString()}
                 </div>
               )}
             </div>
           )}
 
-          <div style={{ 
-            marginTop: '10px', 
-            padding: '8px',
-            background: 'rgba(255,255,255,0.1)',
-            borderRadius: '6px',
-            fontSize: '0.8em'
-          }}>
+          <div
+            style={{
+              marginTop: '10px',
+              padding: '8px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              fontSize: '0.8em',
+            }}
+          >
             ⚠️ <strong>Dev Only:</strong> This panel is only visible in development mode
           </div>
 
           <button
             onClick={() => {
-              console.log('=== TENANT DEBUG INFO ===')
-              console.log('Tenant ID:', userProfile.tenant_id)
-              console.log('Tenant Name:', tenantInfo?.name)
-              console.log('User Role:', userProfile.role)
-              console.log('User Email:', user.email)
-              console.log('Tenant Info:', tenantInfo)
-              console.log('User Profile:', userProfile)
-              console.log('========================')
-              alert('Tenant info logged to console')
+              console.log('=== TENANT DEBUG INFO ===');
+              console.log('Tenant ID:', userProfile.tenant_id);
+              console.log('Tenant Name:', tenantInfo?.name);
+              console.log('User Role:', userProfile.role);
+              console.log('User Email:', user.email);
+              console.log('Tenant Info:', tenantInfo);
+              console.log('User Profile:', userProfile);
+              console.log('========================');
+              alert('Tenant info logged to console');
             }}
             style={{
               width: '100%',
@@ -182,7 +190,7 @@ export default function TenantDebugPanel() {
               padding: '6px',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontSize: '0.9em'
+              fontSize: '0.9em',
             }}
           >
             📋 Log to Console
@@ -190,5 +198,5 @@ export default function TenantDebugPanel() {
         </>
       )}
     </div>
-  )
+  );
 }

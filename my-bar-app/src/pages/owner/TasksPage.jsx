@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../../supabaseClient'
-import { useAuth } from '../../contexts/AuthContext'
-import DashboardLayout from '../../components/DashboardLayout'
-import TaskStatistics from '../../components/TaskStatistics'
-import TaskComments from '../../components/TaskComments'
-import TaskHistory from '../../components/TaskHistory'
-import './Pages.css'
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
+import DashboardLayout from '../../components/DashboardLayout';
+import TaskStatistics from '../../components/TaskStatistics';
+import TaskComments from '../../components/TaskComments';
+import TaskHistory from '../../components/TaskHistory';
+import './Pages.css';
 
 export default function TasksPage() {
-  const { userProfile } = useAuth()
-  const [tasks, setTasks] = useState([])
-  const [staff, setStaff] = useState([])
-  const [locations, setLocations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const { userProfile } = useAuth();
+  const [tasks, setTasks] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -21,141 +21,157 @@ export default function TasksPage() {
     status: 'pending',
     assigned_to: '',
     location_id: '',
-    due_date: ''
-  })
-  const [selectedTask, setSelectedTask] = useState(null)
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [filterStatus, setFilterStatus] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
+    due_date: '',
+  });
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchTasks()
-    fetchStaff()
-    fetchLocations()
-  }, [])
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
-        .select('*, locations(name)')
+        .select('*, locations!location_id(name)')
         .eq('tenant_id', userProfile.tenant_id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (error) throw error
+      if (error) {
+        throw error;
+      }
 
       // Fetch user emails separately from profiles
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(t => t.assigned_to).filter(Boolean))]
+        const userIds = [...new Set(data.map((t) => t.assigned_to).filter(Boolean))];
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, email')
-          .in('user_id', userIds)
+          .select('id, email')
+          .in('id', userIds);
 
-        const profileMap = profiles?.reduce((acc, p) => ({ ...acc, [p.user_id]: p }), {}) || {}
-        const tasksWithUsers = data.map(t => ({
+        const profileMap = profiles?.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}) || {};
+        const tasksWithUsers = data.map((t) => ({
           ...t,
-          users: profileMap[t.assigned_to] || null
-        }))
-        setTasks(tasksWithUsers)
+          users: profileMap[t.assigned_to] || null,
+        }));
+        setTasks(tasksWithUsers);
       } else {
-        setTasks(data || [])
+        setTasks(data || []);
       }
     } catch (error) {
-      console.error('Error fetching tasks:', error)
+      console.error('Error fetching tasks:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, [userProfile.tenant_id]);
 
-  const fetchStaff = async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id, email')
         .eq('tenant_id', userProfile.tenant_id)
-        .in('role', ['staff', 'admin'])
+        .in('role', ['staff', 'admin']);
 
-      if (error) throw error
-      setStaff(data || [])
+      if (error) {
+        throw error;
+      }
+      setStaff(data || []);
     } catch (error) {
-      console.error('Error fetching staff:', error)
+      console.error('Error fetching staff:', error);
     }
-  }
+  }, [userProfile.tenant_id]);
 
-  const fetchLocations = async () => {
+  const fetchLocations = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('locations')
         .select('id, name')
-        .eq('tenant_id', userProfile.tenant_id)
+        .eq('tenant_id', userProfile.tenant_id);
 
-      if (error) throw error
-      setLocations(data || [])
+      if (error) {
+        throw error;
+      }
+      setLocations(data || []);
     } catch (error) {
-      console.error('Error fetching locations:', error)
+      console.error('Error fetching locations:', error);
     }
-  }
+  }, [userProfile.tenant_id]);
+
+  useEffect(() => {
+    fetchTasks();
+    fetchStaff();
+    fetchLocations();
+  }, [fetchTasks, fetchStaff, fetchLocations]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .insert([{
+      const { error } = await supabase.from('tasks').insert([
+        {
           tenant_id: userProfile.tenant_id,
-          ...formData
-        }])
+          ...formData,
+        },
+      ]);
 
-      if (error) throw error
-      
-      setFormData({ title: '', description: '', priority: 'medium', status: 'pending', assigned_to: '', location_id: '', due_date: '' })
-      setShowForm(false)
-      fetchTasks()
+      if (error) {
+        throw error;
+      }
+
+      setFormData({
+        title: '',
+        description: '',
+        priority: 'medium',
+        status: 'pending',
+        assigned_to: '',
+        location_id: '',
+        due_date: '',
+      });
+      setShowForm(false);
+      fetchTasks();
     } catch (error) {
-      alert('Error creating task: ' + error.message)
+      alert(`Error creating task: ${error.message}`);
     }
-  }
+  };
 
   const updateStatus = async (id, newStatus) => {
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: newStatus })
-        .eq('id', id)
+      const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
 
-      if (error) throw error
-      fetchTasks()
+      if (error) {
+        throw error;
+      }
+      fetchTasks();
     } catch (error) {
-      alert('Error updating task: ' + error.message)
+      alert(`Error updating task: ${error.message}`);
     }
-  }
+  };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this task?')) return
+    if (!confirm('Are you sure you want to delete this task?')) {
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id)
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
 
-      if (error) throw error
-      fetchTasks()
+      if (error) {
+        throw error;
+      }
+      fetchTasks();
     } catch (error) {
-      alert('Error deleting task: ' + error.message)
+      alert(`Error deleting task: ${error.message}`);
     }
-  }
+  };
 
   const getPriorityColor = (priority) => {
     const colors = {
       low: '#28a745',
       medium: '#ffc107',
       high: '#ff9800',
-      urgent: '#dc3545'
-    }
-    return colors[priority] || '#666'
-  }
+      urgent: '#dc3545',
+    };
+    return colors[priority] || '#666';
+  };
 
   return (
     <DashboardLayout>
@@ -170,16 +186,16 @@ export default function TasksPage() {
 
         <div className="action-bar">
           <div style={{ display: 'flex', gap: '10px', flex: 1 }}>
-            <input 
-              type="text" 
-              placeholder="Search tasks..." 
+            <input
+              type="text"
+              placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ 
+              style={{
                 flex: 1,
                 padding: '8px 12px',
                 border: '1px solid #e0e0e0',
-                borderRadius: '6px'
+                borderRadius: '6px',
               }}
             />
             <select
@@ -189,7 +205,7 @@ export default function TasksPage() {
                 padding: '8px 12px',
                 border: '1px solid #e0e0e0',
                 borderRadius: '6px',
-                background: 'white'
+                background: 'white',
               }}
             >
               <option value="all">All Status</option>
@@ -216,7 +232,7 @@ export default function TasksPage() {
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     required
                   />
                 </div>
@@ -224,7 +240,7 @@ export default function TasksPage() {
                   <label>Description</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="grid-2">
@@ -232,11 +248,13 @@ export default function TasksPage() {
                     <label>Assign To</label>
                     <select
                       value={formData.assigned_to}
-                      onChange={(e) => setFormData({...formData, assigned_to: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                     >
                       <option value="">Unassigned</option>
                       {staff.map((member) => (
-                        <option key={member.id} value={member.id}>{member.email}</option>
+                        <option key={member.id} value={member.id}>
+                          {member.email}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -244,11 +262,13 @@ export default function TasksPage() {
                     <label>Location</label>
                     <select
                       value={formData.location_id}
-                      onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     >
                       <option value="">Any location</option>
                       {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -258,7 +278,7 @@ export default function TasksPage() {
                     <label>Priority</label>
                     <select
                       value={formData.priority}
-                      onChange={(e) => setFormData({...formData, priority: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -271,13 +291,19 @@ export default function TasksPage() {
                     <input
                       type="datetime-local"
                       value={formData.due_date}
-                      onChange={(e) => setFormData({...formData, due_date: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                     />
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit" className="btn btn-primary">Create Task</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                  <button type="submit" className="btn btn-primary">
+                    Create Task
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowForm(false)}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -311,68 +337,102 @@ export default function TasksPage() {
                 </thead>
                 <tbody>
                   {tasks
-                    .filter(task => {
-                      const matchesStatus = filterStatus === 'all' || task.status === filterStatus
-                      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                          task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-                      return matchesStatus && matchesSearch
+                    .filter((task) => {
+                      const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+                      const matchesSearch =
+                        task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+                      return matchesStatus && matchesSearch;
                     })
                     .map((task) => (
-                    <tr key={task.id}>
-                      <td>
-                        <strong>{task.title}</strong>
-                        {task.description && <div style={{ fontSize: '0.85em', color: '#666' }}>{task.description}</div>}
-                      </td>
-                      <td>{task.users?.email || 'Unassigned'}</td>
-                      <td>{task.locations?.name || 'Any'}</td>
-                      <td>
-                        <span style={{
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.85em',
-                          fontWeight: 'bold',
-                          color: 'white',
-                          backgroundColor: getPriorityColor(task.priority)
-                        }}>
-                          {task.priority}
-                        </span>
-                      </td>
-                      <td>
-                        <select
-                          value={task.status}
-                          onChange={(e) => updateStatus(task.id, e.target.value)}
-                          style={{ padding: '4px 8px', fontSize: '0.85em' }}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="in_progress">In Progress</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
-                      <td>{task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ padding: '5px 10px', fontSize: '0.85em' }}
-                            onClick={() => {
-                              setSelectedTask(task)
-                              setShowDetailModal(true)
+                      <tr key={task.id}>
+                        <td>
+                          <div style={{ maxWidth: '300px' }}>
+                            <strong style={{ fontSize: '1em', color: '#1a1a2e', display: 'block', marginBottom: '4px' }}>
+                              {task.title}
+                            </strong>
+                            {task.description && (
+                              <div style={{
+                                fontSize: '0.85em',
+                                color: '#666',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                              }}
+                              >
+                                {task.description}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td>{task.users?.email || 'Unassigned'}</td>
+                        <td>{task.locations?.name || 'Any'}</td>
+                        <td>
+                          <span
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              fontSize: '0.8em',
+                              fontWeight: '700',
+                              color: 'white',
+                              backgroundColor: getPriorityColor(task.priority),
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                              display: 'inline-block',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                             }}
                           >
-                            View
-                          </button>
-                          <button
-                            className="btn btn-danger"
-                            style={{ padding: '5px 10px', fontSize: '0.85em' }}
-                            onClick={() => handleDelete(task.id)}
+                            {task.priority}
+                          </span>
+                        </td>
+                        <td>
+                          <select
+                            value={task.status}
+                            onChange={(e) => updateStatus(task.id, e.target.value)}
+                            className={`status-select status-${task.status}`}
                           >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <option value="pending">📋 Pending</option>
+                            <option value="in_progress">⚙️ In Progress</option>
+                            <option value="completed">✅ Completed</option>
+                            <option value="cancelled">🚫 Cancelled</option>
+                          </select>
+                        </td>
+                        <td>
+                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : '-'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button
+                              className="btn btn-secondary"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '0.85em',
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={() => {
+                                setSelectedTask(task);
+                                setShowDetailModal(true);
+                              }}
+                            >
+                              👁️ View
+                            </button>
+                            <button
+                              className="btn btn-danger"
+                              style={{
+                                padding: '6px 12px',
+                                fontSize: '0.85em',
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={() => handleDelete(task.id)}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -381,50 +441,58 @@ export default function TasksPage() {
 
         {/* Task Detail Modal */}
         {showDetailModal && selectedTask && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px'
-          }}>
-            <div style={{
-              background: 'white',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '800px',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-            }}>
-              <div style={{
-                padding: '20px',
-                borderBottom: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'start',
-                position: 'sticky',
-                top: 0,
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '20px',
+            }}
+          >
+            <div
+              style={{
                 background: 'white',
-                zIndex: 1
-              }}>
+                borderRadius: '12px',
+                width: '100%',
+                maxWidth: '800px',
+                maxHeight: '90vh',
+                overflow: 'auto',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div
+                style={{
+                  padding: '20px',
+                  borderBottom: '1px solid #e0e0e0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'start',
+                  position: 'sticky',
+                  top: 0,
+                  background: 'white',
+                  zIndex: 1,
+                }}
+              >
                 <div>
                   <h3 style={{ margin: '0 0 10px 0' }}>{selectedTask.title}</h3>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '0.85em',
-                      fontWeight: 'bold',
-                      color: 'white',
-                      backgroundColor: getPriorityColor(selectedTask.priority)
-                    }}>
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.85em',
+                        fontWeight: 'bold',
+                        color: 'white',
+                        backgroundColor: getPriorityColor(selectedTask.priority),
+                      }}
+                    >
                       {selectedTask.priority}
                     </span>
                     <span className={`status-badge status-${selectedTask.status}`}>
@@ -439,13 +507,13 @@ export default function TasksPage() {
                     border: 'none',
                     fontSize: '1.5em',
                     cursor: 'pointer',
-                    color: '#666'
+                    color: '#666',
                   }}
                 >
                   ✕
                 </button>
               </div>
-              
+
               <div style={{ padding: '20px' }}>
                 {selectedTask.description && (
                   <div style={{ marginBottom: '20px' }}>
@@ -454,12 +522,14 @@ export default function TasksPage() {
                   </div>
                 )}
 
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(2, 1fr)', 
-                  gap: '15px',
-                  marginBottom: '20px'
-                }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '15px',
+                    marginBottom: '20px',
+                  }}
+                >
                   <div>
                     <strong style={{ color: '#666' }}>Assigned To:</strong>
                     <div>{selectedTask.users?.email || 'Unassigned'}</div>
@@ -470,7 +540,11 @@ export default function TasksPage() {
                   </div>
                   <div>
                     <strong style={{ color: '#666' }}>Due Date:</strong>
-                    <div>{selectedTask.due_date ? new Date(selectedTask.due_date).toLocaleString() : 'No deadline'}</div>
+                    <div>
+                      {selectedTask.due_date
+                        ? new Date(selectedTask.due_date).toLocaleString()
+                        : 'No deadline'}
+                    </div>
                   </div>
                   <div>
                     <strong style={{ color: '#666' }}>Created:</strong>
@@ -493,5 +567,5 @@ export default function TasksPage() {
         )}
       </div>
     </DashboardLayout>
-  )
+  );
 }

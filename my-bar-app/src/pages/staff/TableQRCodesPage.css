@@ -1,0 +1,446 @@
+.table-qr-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: #666;
+}
+
+.loading, .empty-state {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.qr-card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.qr-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.qr-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.qr-card-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1;
+}
+
+.zone-badge {
+  background: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.occupied {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.reserved {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.maintenance {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.qr-preview {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.qr-image {
+  max-width: 200px;
+  width: 100%;
+  height: auto;
+}
+
+.qr-loading {
+  padding: 2rem;
+  color: #999;
+}
+
+.qr-info {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-weight: 600;
+  color: #555;
+}
+
+.info-row .value {
+  color: #333;
+}
+
+.token-value {
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  letter-spacing: 1px;
+  background: #ffe;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #dda;
+}
+
+.url-value {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #0066cc;
+  word-break: break-all;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.qr-actions button {
+  flex: 1;
+  min-width: 100px;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-download {
+  background: #28a745;
+  color: white;
+}
+
+.btn-download:hover {
+  background: #218838;
+}
+
+.btn-print {
+  background: #007bff;
+  color: white;
+}
+
+.btn-print:hover {
+  background: #0069d9;
+}
+
+.btn-regenerate {
+  background: #ffc107;
+  color: #000;
+}
+
+.btn-regenerate:hover {
+  background: #e0a800;
+}
+
+.btn-regenerate:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.info-section {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 3rem;
+}
+
+.info-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.instruction-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.step-number {
+  width: 50px;
+  height: 50px;
+  background: #d4af37;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+}
+
+.instruction-card h3 {
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+
+.instruction-card p {
+  color: #666;
+  margin: 0;
+}
+
+.warning-box {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.warning-box h4 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.warning-box ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #856404;
+}
+
+.warning-box li {
+  margin-bottom: 0.5rem;
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================================ */
+
+/* Tablets and Mobile Devices */
+@media (max-width: 768px) {
+  .table-qr-page {
+    padding: 1rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  /* QR Grid - Single column on mobile */
+  .qr-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  /* QR Card - Larger touch targets */
+  .qr-card {
+    padding: 1.25rem;
+  }
+
+  .qr-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .qr-card-header h3 {
+    font-size: 1.1rem;
+  }
+
+  /* QR Preview - Smaller on mobile */
+  .qr-preview {
+    padding: 1rem;
+  }
+
+  .qr-image {
+    max-width: 150px;
+  }
+
+  /* Actions - Stack vertically */
+  .qr-actions {
+    flex-direction: column;
+  }
+
+  .qr-actions button {
+    width: 100%;
+    min-width: auto;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  /* Info Section - Better mobile padding */
+  .info-section {
+    padding: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .info-section h2 {
+    font-size: 1.25rem;
+  }
+
+  /* Instructions Grid - Single column */
+  .instructions-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .instruction-card {
+    padding: 1.25rem;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+
+  /* Warning Box - Mobile friendly */
+  .warning-box {
+    padding: 1.25rem;
+  }
+
+  .warning-box h4 {
+    font-size: 1rem;
+  }
+
+  /* Info Rows - Stack on small screens */
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .info-row .label {
+    font-size: 0.85rem;
+  }
+
+  .info-row .value {
+    font-size: 0.95rem;
+  }
+}
+
+/* Small Phones */
+@media (max-width: 480px) {
+  .table-qr-page {
+    padding: 0.75rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .qr-card {
+    padding: 1rem;
+  }
+
+  .qr-preview {
+    padding: 0.75rem;
+  }
+
+  .qr-image {
+    max-width: 120px;
+  }
+
+  .qr-actions button {
+    padding: 10px;
+    font-size: 15px;
+  }
+
+  .info-section {
+    padding: 1rem;
+  }
+
+  .instruction-card {
+    padding: 1rem;
+  }
+
+  .step-number {
+    width: 35px;
+    height: 35px;
+    font-size: 1.1rem;
+  }
+
+  .token-value,
+  .url-value {
+    font-size: 0.75rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .qr-card {
+    page-break-inside: avoid;
+  }
+}

@@ -3,7 +3,7 @@
  * Ensures proper multi-tenant isolation across the application
  */
 
-import { supabase } from '../supabaseClient'
+import { supabase } from '../supabaseClient';
 
 /**
  * Get current user's tenant_id from their profile
@@ -11,23 +11,29 @@ import { supabase } from '../supabaseClient'
  */
 export const getCurrentTenantId = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return null
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return null;
+    }
 
     const { data, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('tenant_id')
       .eq('id', user.id)
-      .single()
+      .single();
 
-    if (error) throw error
-    return data?.tenant_id || null
+    if (error) {
+      throw error;
+    }
+    return data?.tenant_id || null;
   } catch (error) {
-    console.error('Error fetching tenant_id:', error)
-    return null
+    console.error('Error fetching tenant_id:', error);
+    return null;
   }
-}
+};
 
 /**
  * Query builder that automatically adds tenant_id filter
@@ -37,14 +43,11 @@ export const getCurrentTenantId = async () => {
  */
 export const tenantQuery = (table, tenantId) => {
   if (!tenantId) {
-    throw new Error('tenantId is required for tenant queries')
+    throw new Error('tenantId is required for tenant queries');
   }
-  
-  return supabase
-    .from(table)
-    .select('*')
-    .eq('tenant_id', tenantId)
-}
+
+  return supabase.from(table).select('*').eq('tenant_id', tenantId);
+};
 
 /**
  * Insert data with automatic tenant_id assignment
@@ -55,23 +58,20 @@ export const tenantQuery = (table, tenantId) => {
  */
 export const tenantInsert = async (table, data, tenantId) => {
   if (!tenantId) {
-    throw new Error('tenantId is required for inserting data')
+    throw new Error('tenantId is required for inserting data');
   }
 
   // Handle both single object and array of objects
   const dataWithTenant = Array.isArray(data)
-    ? data.map(item => ({ ...item, tenant_id: tenantId }))
-    : { ...data, tenant_id: tenantId }
+    ? data.map((item) => ({ ...item, tenant_id: tenantId }))
+    : { ...data, tenant_id: tenantId };
 
-  return await supabase
-    .from(table)
-    .insert(dataWithTenant)
-    .select()
-}
+  return await supabase.from(table).insert(dataWithTenant).select();
+};
 
 /**
  * Update data with tenant_id verification
- * @param {string} table - Table name  
+ * @param {string} table - Table name
  * @param {Object} data - Data to update
  * @param {string} id - Record ID
  * @param {string} tenantId - Tenant ID for verification
@@ -79,7 +79,7 @@ export const tenantInsert = async (table, data, tenantId) => {
  */
 export const tenantUpdate = async (table, data, id, tenantId) => {
   if (!tenantId) {
-    throw new Error('tenantId is required for updating data')
+    throw new Error('tenantId is required for updating data');
   }
 
   return await supabase
@@ -87,8 +87,8 @@ export const tenantUpdate = async (table, data, id, tenantId) => {
     .update(data)
     .eq('id', id)
     .eq('tenant_id', tenantId) // Ensures user can only update their tenant's data
-    .select()
-}
+    .select();
+};
 
 /**
  * Delete data with tenant_id verification
@@ -99,15 +99,11 @@ export const tenantUpdate = async (table, data, id, tenantId) => {
  */
 export const tenantDelete = async (table, id, tenantId) => {
   if (!tenantId) {
-    throw new Error('tenantId is required for deleting data')
+    throw new Error('tenantId is required for deleting data');
   }
 
-  return await supabase
-    .from(table)
-    .delete()
-    .eq('id', id)
-    .eq('tenant_id', tenantId) // Ensures user can only delete their tenant's data
-}
+  return await supabase.from(table).delete().eq('id', id).eq('tenant_id', tenantId); // Ensures user can only delete their tenant's data
+};
 
 /**
  * Get tenant information
@@ -116,19 +112,17 @@ export const tenantDelete = async (table, id, tenantId) => {
  */
 export const getTenantInfo = async (tenantId) => {
   try {
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('id', tenantId)
-      .single()
+    const { data, error } = await supabase.from('tenants').select('*').eq('id', tenantId).single();
 
-    if (error) throw error
-    return data
+    if (error) {
+      throw error;
+    }
+    return data;
   } catch (error) {
-    console.error('Error fetching tenant info:', error)
-    return null
+    console.error('Error fetching tenant info:', error);
+    return null;
   }
-}
+};
 
 /**
  * Check if tenant subscription is active
@@ -141,24 +135,26 @@ export const isTenantActive = async (tenantId) => {
       .from('tenants')
       .select('subscription_status, subscription_end')
       .eq('id', tenantId)
-      .single()
+      .single();
 
-    if (error) throw error
+    if (error) {
+      throw error;
+    }
 
     if (data.subscription_status === 'inactive') {
-      return false
+      return false;
     }
 
     if (data.subscription_end) {
-      return new Date(data.subscription_end) > new Date()
+      return new Date(data.subscription_end) > new Date();
     }
 
-    return data.subscription_status === 'active' || data.subscription_status === 'trial'
+    return data.subscription_status === 'active' || data.subscription_status === 'trial';
   } catch (error) {
-    console.error('Error checking tenant status:', error)
-    return false
+    console.error('Error checking tenant status:', error);
+    return false;
   }
-}
+};
 
 /**
  * Get all users in a tenant (owner/admin only)
@@ -171,15 +167,17 @@ export const getTenantUsers = async (tenantId) => {
       .from('users')
       .select('id, email, role, created_at')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false });
 
-    if (error) throw error
-    return data || []
+    if (error) {
+      throw error;
+    }
+    return data || [];
   } catch (error) {
-    console.error('Error fetching tenant users:', error)
-    return []
+    console.error('Error fetching tenant users:', error);
+    return [];
   }
-}
+};
 
 /**
  * Validate that user belongs to tenant
@@ -193,15 +191,17 @@ export const validateUserTenant = async (userId, tenantId) => {
       .from('users')
       .select('tenant_id')
       .eq('id', userId)
-      .single()
+      .single();
 
-    if (error) throw error
-    return data?.tenant_id === tenantId
+    if (error) {
+      throw error;
+    }
+    return data?.tenant_id === tenantId;
   } catch (error) {
-    console.error('Error validating user tenant:', error)
-    return false
+    console.error('Error validating user tenant:', error);
+    return false;
   }
-}
+};
 
 /**
  * Switch user's tenant (for testing/admin purposes only)
@@ -211,13 +211,10 @@ export const validateUserTenant = async (userId, tenantId) => {
  * @returns {Promise} Update result
  */
 export const switchUserTenant = async (userId, newTenantId) => {
-  console.warn('⚠️ switchUserTenant should only be used in development/testing')
-  
-  return await supabase
-    .from('users')
-    .update({ tenant_id: newTenantId })
-    .eq('id', userId)
-}
+  console.warn('⚠️ switchUserTenant should only be used in development/testing');
+
+  return await supabase.from('users').update({ tenant_id: newTenantId }).eq('id', userId);
+};
 
 export default {
   getCurrentTenantId,
@@ -229,5 +226,5 @@ export default {
   isTenantActive,
   getTenantUsers,
   validateUserTenant,
-  switchUserTenant
-}
+  switchUserTenant,
+};

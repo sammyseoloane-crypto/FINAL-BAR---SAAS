@@ -9,7 +9,7 @@ import { QRCodeSVG } from 'qrcode.react';
 const QRCodeGenerator = ({ value, size = 256, level = 'M', includeMargin = true }) => {
   if (!value) {
     return (
-      <div 
+      <div
         style={{
           width: size,
           height: size,
@@ -18,7 +18,7 @@ const QRCodeGenerator = ({ value, size = 256, level = 'M', includeMargin = true 
           justifyContent: 'center',
           border: '2px dashed #ccc',
           borderRadius: '8px',
-          color: '#666'
+          color: '#666',
         }}
       >
         No QR Code
@@ -27,16 +27,16 @@ const QRCodeGenerator = ({ value, size = 256, level = 'M', includeMargin = true 
   }
 
   return (
-    <div 
+    <div
       style={{
         padding: '20px',
         background: '#fff',
         borderRadius: '12px',
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        display: 'inline-block'
+        display: 'inline-block',
       }}
     >
-      <QRCodeSVG 
+      <QRCodeSVG
         value={value}
         size={size}
         level={level}

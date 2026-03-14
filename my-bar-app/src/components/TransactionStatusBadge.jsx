@@ -12,31 +12,31 @@ const TransactionStatusBadge = ({ status }) => {
         return {
           background: '#fff3cd',
           color: '#856404',
-          label: 'Pending'
+          label: 'Pending',
         };
       case 'confirmed':
         return {
           background: '#d4edda',
           color: '#155724',
-          label: 'Confirmed'
+          label: 'Confirmed',
         };
       case 'cancelled':
         return {
           background: '#f8d7da',
           color: '#721c24',
-          label: 'Cancelled'
+          label: 'Cancelled',
         };
       case 'refunded':
         return {
           background: '#d1ecf1',
           color: '#0c5460',
-          label: 'Refunded'
+          label: 'Refunded',
         };
       default:
         return {
           background: '#e2e8f0',
           color: '#4a5568',
-          label: status || 'Unknown'
+          label: status || 'Unknown',
         };
     }
   };
@@ -53,7 +53,7 @@ const TransactionStatusBadge = ({ status }) => {
         textTransform: 'uppercase',
         borderRadius: '12px',
         background: style.background,
-        color: style.color
+        color: style.color,
       }}
     >
       {style.label}

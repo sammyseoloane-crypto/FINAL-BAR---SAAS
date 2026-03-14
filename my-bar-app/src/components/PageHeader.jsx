@@ -1,19 +1,19 @@
-import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import './PageHeader.css'
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import './PageHeader.css';
 
 export default function PageHeader({ minimal = false }) {
-  const { userProfile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { userProfile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/auth/login')
-  }
+    await signOut();
+    navigate('/auth/login');
+  };
 
   const handleHomeClick = () => {
-    navigate('/dashboard')
-  }
+    navigate('/dashboard');
+  };
 
   return (
     <div className="page-header-nav">
@@ -32,5 +32,5 @@ export default function PageHeader({ minimal = false }) {
         </button>
       </div>
     </div>
-  )
+  );
 }

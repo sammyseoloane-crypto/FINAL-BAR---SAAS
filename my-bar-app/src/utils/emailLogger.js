@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient'
+import { supabase } from '../supabaseClient';
 
 /**
  * Email Logger Utility
@@ -24,7 +24,7 @@ export const logEmail = async ({
   userId = null,
   tenantId = null,
   status = 'sent',
-  metadata = {}
+  metadata = {},
 }) => {
   try {
     const logData = {
@@ -35,27 +35,23 @@ export const logEmail = async ({
       tenant_id: tenantId,
       status: status,
       metadata: metadata,
-      sent_at: new Date().toISOString()
-    }
+      sent_at: new Date().toISOString(),
+    };
 
-    const { data, error } = await supabase
-      .from('email_logs')
-      .insert([logData])
-      .select()
-      .single()
+    const { data, error } = await supabase.from('email_logs').insert([logData]).select().single();
 
     if (error) {
-      console.error('Error logging email:', error)
-      return { data: null, error }
+      console.error('Error logging email:', error);
+      return { data: null, error };
     }
 
-    console.log(`✉️ Email logged: ${emailType} to ${emailTo}`)
-    return { data, error: null }
+    console.log(`✉️ Email logged: ${emailType} to ${emailTo}`);
+    return { data, error: null };
   } catch (error) {
-    console.error('Exception logging email:', error)
-    return { data: null, error }
+    console.error('Exception logging email:', error);
+    return { data: null, error };
   }
-}
+};
 
 /**
  * Log a signup verification email
@@ -73,10 +69,10 @@ export const logSignupVerificationEmail = async (email, userId, tenantId, role) 
     tenantId: tenantId,
     metadata: {
       role: role,
-      signup_date: new Date().toISOString()
-    }
-  })
-}
+      signup_date: new Date().toISOString(),
+    },
+  });
+};
 
 /**
  * Log a password reset email
@@ -92,10 +88,10 @@ export const logPasswordResetEmail = async (email, userId = null, tenantId = nul
     userId: userId,
     tenantId: tenantId,
     metadata: {
-      reset_requested_at: new Date().toISOString()
-    }
-  })
-}
+      reset_requested_at: new Date().toISOString(),
+    },
+  });
+};
 
 /**
  * Log a staff invitation email
@@ -107,14 +103,14 @@ export const logStaffInvitationEmail = async (email, tenantId, invitedBy) => {
   return await logEmail({
     emailTo: email,
     emailType: 'staff_invitation',
-    subject: 'You\'re invited to join Bar SaaS',
+    subject: "You're invited to join Bar SaaS",
     tenantId: tenantId,
     metadata: {
       invited_by: invitedBy,
-      invitation_date: new Date().toISOString()
-    }
-  })
-}
+      invitation_date: new Date().toISOString(),
+    },
+  });
+};
 
 /**
  * Get email logs for a user
@@ -127,15 +123,17 @@ export const getUserEmailLogs = async (userId) => {
       .from('email_logs')
       .select('*')
       .eq('user_id', userId)
-      .order('sent_at', { ascending: false })
+      .order('sent_at', { ascending: false });
 
-    if (error) throw error
-    return { data, error: null }
+    if (error) {
+      throw error;
+    }
+    return { data, error: null };
   } catch (error) {
-    console.error('Error fetching user email logs:', error)
-    return { data: null, error }
+    console.error('Error fetching user email logs:', error);
+    return { data: null, error };
   }
-}
+};
 
 /**
  * Get email logs for a tenant
@@ -150,15 +148,17 @@ export const getTenantEmailLogs = async (tenantId, limit = 50) => {
       .select('*')
       .eq('tenant_id', tenantId)
       .order('sent_at', { ascending: false })
-      .limit(limit)
+      .limit(limit);
 
-    if (error) throw error
-    return { data, error: null }
+    if (error) {
+      throw error;
+    }
+    return { data, error: null };
   } catch (error) {
-    console.error('Error fetching tenant email logs:', error)
-    return { data: null, error }
+    console.error('Error fetching tenant email logs:', error);
+    return { data: null, error };
   }
-}
+};
 
 /**
  * Get email statistics
@@ -168,46 +168,46 @@ export const getTenantEmailLogs = async (tenantId, limit = 50) => {
  */
 export const getEmailStatistics = async (tenantId = null, emailType = null) => {
   try {
-    let query = supabase
-      .from('email_logs')
-      .select('email_type, status, sent_at')
+    let query = supabase.from('email_logs').select('email_type, status, sent_at');
 
     if (tenantId) {
-      query = query.eq('tenant_id', tenantId)
+      query = query.eq('tenant_id', tenantId);
     }
 
     if (emailType) {
-      query = query.eq('email_type', emailType)
+      query = query.eq('email_type', emailType);
     }
 
-    const { data, error } = await query
+    const { data, error } = await query;
 
-    if (error) throw error
+    if (error) {
+      throw error;
+    }
 
     // Calculate statistics
     const stats = {
       total: data.length,
       by_type: {},
       by_status: {},
-      recent_count: data.filter(log => {
-        const logDate = new Date(log.sent_at)
-        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        return logDate > dayAgo
-      }).length
-    }
+      recent_count: data.filter((log) => {
+        const logDate = new Date(log.sent_at);
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return logDate > dayAgo;
+      }).length,
+    };
 
     // Count by type
-    data.forEach(log => {
-      stats.by_type[log.email_type] = (stats.by_type[log.email_type] || 0) + 1
-      stats.by_status[log.status] = (stats.by_status[log.status] || 0) + 1
-    })
+    data.forEach((log) => {
+      stats.by_type[log.email_type] = (stats.by_type[log.email_type] || 0) + 1;
+      stats.by_status[log.status] = (stats.by_status[log.status] || 0) + 1;
+    });
 
-    return { data: stats, error: null }
+    return { data: stats, error: null };
   } catch (error) {
-    console.error('Error fetching email statistics:', error)
-    return { data: null, error }
+    console.error('Error fetching email statistics:', error);
+    return { data: null, error };
   }
-}
+};
 
 /**
  * Update email status (for tracking delivery, opens, etc.)
@@ -218,11 +218,11 @@ export const getEmailStatistics = async (tenantId = null, emailType = null) => {
 export const updateEmailStatus = async (emailLogId, status, errorMessage = null) => {
   try {
     const updateData = {
-      status: status
-    }
+      status: status,
+    };
 
     if (errorMessage) {
-      updateData.error_message = errorMessage
+      updateData.error_message = errorMessage;
     }
 
     const { data, error } = await supabase
@@ -230,12 +230,14 @@ export const updateEmailStatus = async (emailLogId, status, errorMessage = null)
       .update(updateData)
       .eq('id', emailLogId)
       .select()
-      .single()
+      .single();
 
-    if (error) throw error
-    return { data, error: null }
+    if (error) {
+      throw error;
+    }
+    return { data, error: null };
   } catch (error) {
-    console.error('Error updating email status:', error)
-    return { data: null, error }
+    console.error('Error updating email status:', error);
+    return { data: null, error };
   }
-}
+};

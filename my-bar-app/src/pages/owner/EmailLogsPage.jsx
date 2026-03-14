@@ -1,54 +1,58 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import DashboardLayout from '../../components/DashboardLayout'
-import { getTenantEmailLogs, getEmailStatistics } from '../../utils/emailLogger'
-import './Pages.css'
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import DashboardLayout from '../../components/DashboardLayout';
+import { getTenantEmailLogs, getEmailStatistics } from '../../utils/emailLogger';
+import './Pages.css';
 
 export default function EmailLogsPage() {
-  const { userProfile } = useAuth()
-  const [emailLogs, setEmailLogs] = useState([])
-  const [statistics, setStatistics] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all') // all, signup_verification, password_reset, etc.
-  const [statusFilter, setStatusFilter] = useState('all')
+  const { userProfile } = useAuth();
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [statistics, setStatistics] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all'); // all, signup_verification, password_reset, etc.
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     if (userProfile?.tenant_id) {
-      fetchEmailLogs()
-      fetchStatistics()
+      fetchEmailLogs();
+      fetchStatistics();
     }
-  }, [userProfile])
+  }, [userProfile]);
 
   const fetchEmailLogs = async () => {
     try {
-      setLoading(true)
-      const { data, error } = await getTenantEmailLogs(userProfile.tenant_id, 100)
+      setLoading(true);
+      const { data, error } = await getTenantEmailLogs(userProfile.tenant_id, 100);
 
-      if (error) throw error
-      setEmailLogs(data || [])
+      if (error) {
+        throw error;
+      }
+      setEmailLogs(data || []);
     } catch (error) {
-      console.error('Error fetching email logs:', error)
-      alert('Error loading email logs: ' + error.message)
+      console.error('Error fetching email logs:', error);
+      alert(`Error loading email logs: ${error.message}`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchStatistics = async () => {
     try {
-      const { data, error } = await getEmailStatistics(userProfile.tenant_id)
-      if (error) throw error
-      setStatistics(data)
+      const { data, error } = await getEmailStatistics(userProfile.tenant_id);
+      if (error) {
+        throw error;
+      }
+      setStatistics(data);
     } catch (error) {
-      console.error('Error fetching email statistics:', error)
+      console.error('Error fetching email statistics:', error);
     }
-  }
+  };
 
-  const filteredLogs = emailLogs.filter(log => {
-    const typeMatch = filter === 'all' || log.email_type === filter
-    const statusMatch = statusFilter === 'all' || log.status === statusFilter
-    return typeMatch && statusMatch
-  })
+  const filteredLogs = emailLogs.filter((log) => {
+    const typeMatch = filter === 'all' || log.email_type === filter;
+    const statusMatch = statusFilter === 'all' || log.status === statusFilter;
+    return typeMatch && statusMatch;
+  });
 
   const getStatusBadgeStyle = (status) => {
     const styles = {
@@ -56,10 +60,10 @@ export default function EmailLogsPage() {
       delivered: { background: '#48bb78', color: 'white' },
       failed: { background: '#f56565', color: 'white' },
       bounced: { background: '#ed8936', color: 'white' },
-      opened: { background: '#9f7aea', color: 'white' }
-    }
-    return styles[status] || styles.sent
-  }
+      opened: { background: '#d4af37', color: 'white' },
+    };
+    return styles[status] || styles.sent;
+  };
 
   const getTypeIcon = (type) => {
     const icons = {
@@ -67,16 +71,17 @@ export default function EmailLogsPage() {
       password_reset: '🔑',
       staff_invitation: '👥',
       order_confirmation: '🛍️',
-      notification: '🔔'
-    }
-    return icons[type] || '✉️'
-  }
+      notification: '🔔',
+    };
+    return icons[type] || '✉️';
+  };
 
   const formatEmailType = (type) => {
-    return type.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ')
-  }
+    return type
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   if (loading) {
     return (
@@ -85,7 +90,7 @@ export default function EmailLogsPage() {
           <p>Loading email logs...</p>
         </div>
       </DashboardLayout>
-    )
+    );
   }
 
   return (
@@ -98,12 +103,14 @@ export default function EmailLogsPage() {
 
         {/* Statistics Cards */}
         {statistics && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '20px',
-            marginBottom: '30px'
-          }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '20px',
+              marginBottom: '30px',
+            }}
+          >
             <div className="card">
               <div className="card-body" style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '2em', marginBottom: '10px' }}>📊</div>
@@ -161,7 +168,7 @@ export default function EmailLogsPage() {
                     width: '100%',
                     padding: '8px',
                     border: '1px solid #cbd5e0',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
                   }}
                 >
                   <option value="all">All Types</option>
@@ -184,7 +191,7 @@ export default function EmailLogsPage() {
                     width: '100%',
                     padding: '8px',
                     border: '1px solid #cbd5e0',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
                   }}
                 >
                   <option value="all">All Status</option>
@@ -200,8 +207,8 @@ export default function EmailLogsPage() {
                 <button
                   className="btn btn-secondary"
                   onClick={() => {
-                    setFilter('all')
-                    setStatusFilter('all')
+                    setFilter('all');
+                    setStatusFilter('all');
                   }}
                 >
                   Clear Filters
@@ -253,9 +260,7 @@ export default function EmailLogsPage() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ fontSize: '0.9em' }}>
-                          {log.subject || '-'}
-                        </div>
+                        <div style={{ fontSize: '0.9em' }}>{log.subject || '-'}</div>
                       </td>
                       <td>
                         <span
@@ -264,7 +269,7 @@ export default function EmailLogsPage() {
                             padding: '4px 12px',
                             borderRadius: '12px',
                             fontSize: '0.85em',
-                            fontWeight: '500'
+                            fontWeight: '500',
                           }}
                         >
                           {log.status}
@@ -281,24 +286,28 @@ export default function EmailLogsPage() {
                             <summary style={{ fontSize: '0.85em', color: '#4299e1' }}>
                               View Metadata
                             </summary>
-                            <pre style={{
-                              fontSize: '0.75em',
-                              background: '#f7fafc',
-                              padding: '8px',
-                              borderRadius: '4px',
-                              marginTop: '8px',
-                              overflow: 'auto'
-                            }}>
+                            <pre
+                              style={{
+                                fontSize: '0.75em',
+                                background: '#f7fafc',
+                                padding: '8px',
+                                borderRadius: '4px',
+                                marginTop: '8px',
+                                overflow: 'auto',
+                              }}
+                            >
                               {JSON.stringify(log.metadata, null, 2)}
                             </pre>
                           </details>
                         )}
                         {log.error_message && (
-                          <div style={{
-                            fontSize: '0.85em',
-                            color: '#e53e3e',
-                            marginTop: '4px'
-                          }}>
+                          <div
+                            style={{
+                              fontSize: '0.85em',
+                              color: '#e53e3e',
+                              marginTop: '4px',
+                            }}
+                          >
                             ⚠️ {log.error_message}
                           </div>
                         )}
@@ -311,17 +320,20 @@ export default function EmailLogsPage() {
           </div>
         )}
 
-        <div style={{
-          marginTop: '20px',
-          padding: '15px',
-          background: '#f7fafc',
-          borderRadius: '8px',
-          fontSize: '0.9em'
-        }}>
-          <strong>💡 Tip:</strong> Email logs help you track delivery issues and monitor communication with users.
-          Use filters to find specific email types or check for failed deliveries.
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '15px',
+            background: '#f7fafc',
+            borderRadius: '8px',
+            fontSize: '0.9em',
+          }}
+        >
+          <strong>💡 Tip:</strong> Email logs help you track delivery issues and monitor
+          communication with users. Use filters to find specific email types or check for failed
+          deliveries.
         </div>
       </div>
     </DashboardLayout>
-  )
+  );
 }

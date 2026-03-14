@@ -1,0 +1,131 @@
+# PowerShell script to automate database backups
+# Save as: scripts\backup-database.ps1
+
+param(
+    [string]$BackupDir = "D:\backups\bar-saas",
+    [switch]$Compress,
+    [switch]$UploadToCloud
+)
+
+$ErrorActionPreference = "Stop"
+
+# Configuration
+$Date = Get-Date -Format "yyyyMMdd_HHmmss"
+$BackupFile = Join-Path $BackupDir "backup_$Date.dump"
+$LogFile = Join-Path $BackupDir "backup_log.txt"
+
+# Ensure backup directory exists
+if (!(Test-Path $BackupDir)) {
+    New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
+}
+
+# Function to log messages
+function Write-Log {
+    param([string]$Message)
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $LogMessage = "[$Timestamp] $Message"
+    Write-Host $LogMessage
+    Add-Content -Path $LogFile -Value $LogMessage
+}
+
+Write-Log "=== Starting Database Backup ==="
+
+# Load environment variables from .env
+if (Test-Path ".env") {
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match '^([^=]+)=(.*)$') {
+            [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2])
+        }
+    }
+}
+
+# Set database password
+$env:PGPASSWORD = $env:SUPABASE_DB_PASSWORD
+
+if (!$env:PGPASSWORD) {
+    Write-Log "ERROR: SUPABASE_DB_PASSWORD not set"
+    exit 1
+}
+
+# Create backup
+Write-Log "Creating backup: $BackupFile"
+
+try {
+    $pgDumpArgs = @(
+        "-h", $env:SUPABASE_DB_HOST,
+        "-p", "5432",
+        "-U", "postgres",
+        "-d", "postgres",
+        "-F", "c",
+        "-f", $BackupFile
+    )
+    
+    & pg_dump $pgDumpArgs
+    
+    if ($LASTEXITCODE -eq 0) {
+        $FileSize = (Get-Item $BackupFile).Length / 1MB
+        Write-Log "✓ Backup created successfully (Size: $([Math]::Round($FileSize, 2)) MB)"
+    } else {
+        throw "pg_dump failed with exit code $LASTEXITCODE"
+    }
+} catch {
+    Write-Log "✗ Backup failed: $_"
+    exit 1
+}
+
+# Compress backup if requested
+if ($Compress) {
+    Write-Log "Compressing backup..."
+    try {
+        Compress-Archive -Path $BackupFile -DestinationPath "$BackupFile.zip" -Force
+        Remove-Item $BackupFile
+        $BackupFile = "$BackupFile.zip"
+        $CompressedSize = (Get-Item $BackupFile).Length / 1MB
+        Write-Log "✓ Backup compressed (Size: $([Math]::Round($CompressedSize, 2)) MB)"
+    } catch {
+        Write-Log "✗ Compression failed: $_"
+    }
+}
+
+# Upload to cloud if requested (example: Azure Blob Storage)
+if ($UploadToCloud) {
+    Write-Log "Uploading to cloud storage..."
+    try {
+        # Example using Azure CLI (install with: winget install Microsoft.AzureCLI)
+        # az storage blob upload --account-name youraccount --container-name backups --file $BackupFile --name "$(Split-Path $BackupFile -Leaf)"
+        
+        # Or using AWS CLI
+        # aws s3 cp $BackupFile s3://your-bucket/backups/
+        
+        Write-Log "✓ Backup uploaded to cloud"
+    } catch {
+        Write-Log "✗ Cloud upload failed: $_"
+    }
+}
+
+# Clean up old backups (keep last 30 days)
+Write-Log "Cleaning up old backups..."
+$OldBackups = Get-ChildItem $BackupDir -Filter "backup_*.dump*" | 
+    Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-30) }
+
+foreach ($OldBackup in $OldBackups) {
+    try {
+        Remove-Item $OldBackup.FullName -Force
+        Write-Log "✓ Deleted old backup: $($OldBackup.Name)"
+    } catch {
+        Write-Log "✗ Failed to delete $($OldBackup.Name): $_"
+    }
+}
+
+# Summary
+Write-Log "=== Backup Complete ==="
+Write-Log "Backup file: $BackupFile"
+Write-Log "Total backups in directory: $((Get-ChildItem $BackupDir -Filter 'backup_*.dump*').Count)"
+
+# Send notification (optional)
+# Example: Send email or Slack notification
+# Invoke-RestMethod -Uri "https://hooks.slack.com/services/YOUR/WEBHOOK/URL" `
+#     -Method Post -Body '{"text":"Database backup completed successfully"}' `
+#     -ContentType 'application/json'
+
+exit 0

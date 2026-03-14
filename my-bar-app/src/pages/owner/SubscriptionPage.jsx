@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import DashboardLayout from '../../components/DashboardLayout'
-import './Pages.css'
+import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import DashboardLayout from '../../components/DashboardLayout';
+import './Pages.css';
 
 export default function SubscriptionPage() {
-  const { userProfile } = useAuth()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
+  const { userProfile } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   const currentPlan = {
     status: 'active',
@@ -15,18 +15,18 @@ export default function SubscriptionPage() {
     currency: 'ZAR',
     billingPeriod: '6 months',
     nextBillingDate: '2026-08-17',
-    startDate: '2026-02-17'
-  }
+    startDate: '2026-02-17',
+  };
 
   const handleUpgrade = () => {
-    alert('Upgrade feature coming soon!')
-  }
+    alert('Upgrade feature coming soon!');
+  };
 
   const handleCancelSubscription = () => {
     if (confirm('Are you sure you want to cancel your subscription?')) {
-      alert('Cancellation feature coming soon!')
+      alert('Cancellation feature coming soon!');
     }
-  }
+  };
 
   return (
     <DashboardLayout title="Subscription Management">
@@ -54,11 +54,15 @@ export default function SubscriptionPage() {
               <div className="plan-details">
                 <div className="detail-item">
                   <span className="label">Started:</span>
-                  <span className="value">{new Date(currentPlan.startDate).toLocaleDateString()}</span>
+                  <span className="value">
+                    {new Date(currentPlan.startDate).toLocaleDateString()}
+                  </span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Next Billing:</span>
-                  <span className="value">{new Date(currentPlan.nextBillingDate).toLocaleDateString()}</span>
+                  <span className="value">
+                    {new Date(currentPlan.nextBillingDate).toLocaleDateString()}
+                  </span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Auto-renewal:</span>
@@ -107,13 +111,17 @@ export default function SubscriptionPage() {
                     <td>2026-02-17</td>
                     <td>6-month subscription</td>
                     <td>R 20.00</td>
-                    <td><span className="status-badge status-paid">Paid</span></td>
+                    <td>
+                      <span className="status-badge status-paid">Paid</span>
+                    </td>
                   </tr>
                   <tr>
                     <td>2025-08-17</td>
                     <td>6-month subscription</td>
                     <td>R 20.00</td>
-                    <td><span className="status-badge status-paid">Paid</span></td>
+                    <td>
+                      <span className="status-badge status-paid">Paid</span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -130,12 +138,8 @@ export default function SubscriptionPage() {
                 <button className="btn btn-primary" onClick={handleUpgrade}>
                   Upgrade Plan
                 </button>
-                <button className="btn btn-secondary">
-                  Update Payment Method
-                </button>
-                <button className="btn btn-secondary">
-                  Download Invoice
-                </button>
+                <button className="btn btn-secondary">Update Payment Method</button>
+                <button className="btn btn-secondary">Download Invoice</button>
                 <button className="btn btn-danger" onClick={handleCancelSubscription}>
                   Cancel Subscription
                 </button>
@@ -145,5 +149,5 @@ export default function SubscriptionPage() {
         </div>
       </div>
     </DashboardLayout>
-  )
+  );
 }

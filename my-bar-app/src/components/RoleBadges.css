@@ -1,0 +1,60 @@
+/* Role Badge Styles */
+.role-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.role-platform-admin {
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  color: white;
+  border: 2px solid rgba(147, 51, 234, 0.3);
+}
+
+.role-owner {
+  background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
+  color: white;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+.role-manager {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.role-staff {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: 2px solid rgba(16, 185, 129, 0.3);
+}
+
+.role-promoter {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.role-vip-host {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+  color: white;
+  border: 2px solid rgba(236, 72, 153, 0.3);
+}
+
+.role-customer {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+}
+
+/* Hover effects for badges */
+.role-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}

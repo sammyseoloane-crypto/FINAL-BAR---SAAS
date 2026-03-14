@@ -3,6 +3,8 @@
 import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&no-check'
 // @ts-ignore
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0?target=deno'
+import { apiRateLimiter, getClientIdentifier, createRateLimitResponse } from '../_shared/rateLimiter.ts'
+import { trackPaymentFailure, trackDatabaseError, trackAuthError } from '../_shared/monitoring.ts'
 
 // Deno type declarations for local TypeScript
 declare const Deno: {
@@ -14,7 +16,9 @@ declare const Deno: {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, baggage, sentry-trace',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,6 +26,17 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  // Apply rate limiting (100 requests per minute per IP)
+  const clientId = getClientIdentifier(req)
+  const rateLimitResult = apiRateLimiter.check(clientId)
+  
+  if (!rateLimitResult.allowed) {
+    console.log('⚠️ Rate limit exceeded for client:', clientId)
+    return createRateLimitResponse(rateLimitResult, apiRateLimiter, corsHeaders)
+  }
+  
+  console.log('✅ Rate limit check passed:', clientId, 'remaining:', rateLimitResult.remaining)
 
   try {
     console.log('🚀 Create checkout called')
@@ -113,6 +128,14 @@ Deno.serve(async (req: Request) => {
       console.error('❌ User error name:', userError.name)
       console.error('❌ User error details:', JSON.stringify(userError, null, 2))
       console.error('❌ Token used:', token.substring(0, 50) + '...')
+      
+      // Track authentication error
+      await trackAuthError(userError, {
+        authType: 'token_validation',
+        errorStatus: userError.status,
+        errorName: userError.name,
+      })
+      
       return new Response(
         JSON.stringify({ 
           code: 401,
@@ -369,6 +392,15 @@ Deno.serve(async (req: Request) => {
     } catch (stripeError) {
       console.error('❌ Stripe checkout error:', stripeError)
       const errorMessage = stripeError instanceof Error ? stripeError.message : 'Stripe error'
+      
+      // Track payment failure due to Stripe API error
+      if (stripeError instanceof Error) {
+        await trackPaymentFailure(stripeError, {
+          errorCode: 'STRIPE_API_ERROR',
+          source: 'create_checkout_session',
+        })
+      }
+      
       return new Response(
         JSON.stringify({ 
           error: errorMessage,
@@ -383,6 +415,14 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error('❌ Error creating checkout session:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    
+    // Track general payment failure
+    if (error instanceof Error) {
+      await trackPaymentFailure(error, {
+        errorCode: 'CHECKOUT_SESSION_CREATION_FAILED',
+        source: 'create_checkout_session',
+      })
+    }
     
     return new Response(
       JSON.stringify({ 

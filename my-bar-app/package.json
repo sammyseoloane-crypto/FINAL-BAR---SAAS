@@ -1,27 +1,56 @@
 {
   "name": "my-bar-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:payments": "vitest src/tests/payments.test.js",
+    "test:multi-tenant": "vitest src/tests/multi-tenant.test.js",
+    "load-test": "k6 run tests/load-test-api.js",
+    "load-test:db": "k6 run tests/load-test-database.js",
+    "backup": "powershell -File scripts/backup-database.ps1",
+    "backup:compress": "powershell -File scripts/backup-database.ps1 -Compress",
+    "verify-backups": "node scripts/verify-backups.js",
+    "lint": "eslint src --ext .js,.jsx",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\""
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^2.20.0",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "@vitest/coverage-v8": "^1.0.4",
+    "@vitest/ui": "^1.0.4",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.1.1",
     "typescript": "~5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^1.0.4"
   },
   "dependencies": {
+    "@sentry/react": "^7.91.0",
+    "@sentry/tracing": "^7.91.0",
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.8.0",
+    "@supabase/supabase-js": "^2.38.5",
     "@vitejs/plugin-react": "^5.1.4",
     "chart.js": "^4.5.1",
     "html5-qrcode": "^2.3.8",
+    "prop-types": "^15.8.1",
+    "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0"
+    "react-router-dom": "^7.13.0",
+    "recharts": "^2.15.4"
   }
 }

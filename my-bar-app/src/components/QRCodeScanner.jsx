@@ -3,7 +3,8 @@
  * Scans QR codes using device camera
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const QRCodeScanner = ({ onScan, onError }) => {
@@ -15,116 +16,106 @@ const QRCodeScanner = ({ onScan, onError }) => {
 
   // Get available cameras
   useEffect(() => {
-    console.log('[QR Scanner] Fetching available cameras...');
     Html5Qrcode.getCameras()
       .then((devices) => {
-        console.log('[QR Scanner] Cameras found:', devices?.length || 0);
         if (devices && devices.length) {
-          devices.forEach((device, index) => {
-            console.log(`[QR Scanner] Camera ${index + 1}:`, device.label, '(ID:', device.id, ')');
-          });
           setCameras(devices);
           // Prefer back camera for mobile
-          const backCamera = devices.find(d => d.label.toLowerCase().includes('back'));
+          const backCamera = devices.find((d) => d.label.toLowerCase().includes('back'));
           const selectedId = backCamera ? backCamera.id : devices[0].id;
           setSelectedCamera(selectedId);
-          console.log('[QR Scanner] Selected camera:', backCamera ? 'Back camera' : 'Default camera', '(ID:', selectedId, ')');
         }
       })
       .catch((err) => {
         console.error('[QR Scanner] Error getting cameras:', err);
-        if (onError) onError('No camera found or permission denied');
+        if (onError) {
+          onError('No camera found or permission denied');
+        }
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Start scanning
   const startScanning = async () => {
     if (!selectedCamera) {
-      if (onError) onError('No camera selected');
+      if (onError) {
+        onError('No camera selected');
+      }
       return;
     }
 
     try {
-      console.log('[QR Scanner] Requesting camera permission...');
-      
       // Request camera permission explicitly first
       try {
         await navigator.mediaDevices.getUserMedia({ video: true });
-        console.log('[QR Scanner] Camera permission granted');
       } catch (permErr) {
         console.error('[QR Scanner] Camera permission error:', permErr);
         if (onError) {
           if (permErr.name === 'NotAllowedError') {
-            onError('❌ Camera permission denied. Please allow camera access in your browser settings.');
+            onError(
+              '❌ Camera permission denied. Please allow camera access in your browser settings.',
+            );
           } else if (permErr.name === 'NotFoundError') {
             onError('❌ No camera found on this device.');
           } else if (permErr.name === 'NotReadableError') {
             onError('❌ Camera is already in use by another application.');
           } else {
-            onError('❌ Camera access error: ' + permErr.message);
+            onError(`❌ Camera access error: ${permErr.message}`);
           }
         }
         return;
       }
 
-      console.log('[QR Scanner] Initializing Html5Qrcode...');
       html5QrCodeRef.current = new Html5Qrcode('qr-reader');
-      
+
       // Configure scanning for mobile optimization
       const config = {
         fps: 10, // Scan 10 frames per second
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
+        qrbox: function (viewfinderWidth, viewfinderHeight) {
           // Use 70% of viewport for better QR code targeting on mobile
           const minEdgePercentage = 0.7;
           const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
           const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-          console.log('[QR Scanner] Scan box size:', qrboxSize);
           return {
             width: qrboxSize,
-            height: qrboxSize
+            height: qrboxSize,
           };
         },
         aspectRatio: 1.0,
         showTorchButtonIfSupported: true, // Enable flashlight on supported devices
         // Support all scan types for QR codes with format: tenantId_userId_transactionId_timestamp_random
-        formatsToSupport: [0] // 0 = QR_CODE
+        formatsToSupport: [0], // 0 = QR_CODE
       };
 
-      console.log('[QR Scanner] Starting camera with config:', config);
-      
       await html5QrCodeRef.current.start(
         selectedCamera,
         config,
-        (decodedText, decodedResult) => {
+        (decodedText, _decodedResult) => {
           // Success callback - QR code scanned!
-          console.log('[QR Scanner] ✅ QR Code scanned successfully!');
-          console.log('[QR Scanner] Decoded text:', decodedText);
-          console.log('[QR Scanner] Format:', decodedResult.result.format?.formatName || 'Unknown');
-          
           // Haptic feedback on mobile
           if (navigator.vibrate) {
             navigator.vibrate(200);
-            console.log('[QR Scanner] Haptic feedback triggered');
           }
-          
+
           if (onScan) {
             onScan(decodedText);
           }
-          
+
           stopScanning();
         },
-        (errorMessage) => {
+        (_errorMessage) => {
           // Error callback - fires frequently while scanning, so we don't log
           // Only uncomment for deep debugging:
-          // console.debug('[QR Scanner] Scan attempt:', errorMessage);
-        }
+          // console.debug('[QR Scanner] Scan attempt:', _errorMessage);
+        },
       );
 
       setIsScanning(true);
-      console.log('[QR Scanner] Scanner started successfully');
     } catch (err) {
       console.error('[QR Scanner] Error starting scanner:', err);
-      if (onError) onError('❌ Failed to start camera: ' + err.message);
+      if (onError) {
+        onError(`❌ Failed to start camera: ${err.message}`);
+      }
     }
   };
 
@@ -132,12 +123,10 @@ const QRCodeScanner = ({ onScan, onError }) => {
   const stopScanning = async () => {
     if (html5QrCodeRef.current && isScanning) {
       try {
-        console.log('[QR Scanner] Stopping scanner...');
         await html5QrCodeRef.current.stop();
         html5QrCodeRef.current.clear();
         html5QrCodeRef.current = null;
         setIsScanning(false);
-        console.log('[QR Scanner] Scanner stopped successfully');
       } catch (err) {
         console.error('[QR Scanner] Error stopping scanner:', err);
       }
@@ -154,26 +143,28 @@ const QRCodeScanner = ({ onScan, onError }) => {
   }, []);
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center',
-      gap: '20px' 
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '20px',
+      }}
+    >
       {/* Camera selection */}
       {cameras.length > 1 && !isScanning && (
         <div style={{ width: '100%', maxWidth: '400px' }}>
-          <label 
+          <label
             htmlFor="camera-select"
-            style={{ 
+            style={{
               display: 'block',
               marginBottom: '8px',
-              fontWeight: '500' 
+              fontWeight: '500',
             }}
           >
             Select Camera:
           </label>
-          <select 
+          <select
             id="camera-select"
             value={selectedCamera || ''}
             onChange={(e) => setSelectedCamera(e.target.value)}
@@ -182,7 +173,7 @@ const QRCodeScanner = ({ onScan, onError }) => {
               padding: '10px',
               fontSize: '14px',
               border: '1px solid #ddd',
-              borderRadius: '6px'
+              borderRadius: '6px',
             }}
           >
             {cameras.map((camera) => (
@@ -195,17 +186,17 @@ const QRCodeScanner = ({ onScan, onError }) => {
       )}
 
       {/* Scanner container - Mobile optimized */}
-      <div 
+      <div
         id="qr-reader"
         ref={scannerRef}
         style={{
           width: '100%',
           maxWidth: '600px',
           minHeight: isScanning ? '400px' : '0',
-          border: isScanning ? '3px solid #667eea' : 'none',
+          border: isScanning ? '3px solid #d4af37' : 'none',
           borderRadius: '12px',
           overflow: 'hidden',
-          boxShadow: isScanning ? '0 8px 16px rgba(102, 126, 234, 0.2)' : 'none'
+          boxShadow: isScanning ? '0 8px 16px rgba(102, 126, 234, 0.2)' : 'none',
         }}
       />
 
@@ -221,14 +212,14 @@ const QRCodeScanner = ({ onScan, onError }) => {
               fontSize: '18px',
               fontWeight: '600',
               color: '#fff',
-              background: selectedCamera ? '#667eea' : '#ccc',
+              background: selectedCamera ? '#d4af37' : '#ccc',
               border: 'none',
               borderRadius: '12px',
               cursor: selectedCamera ? 'pointer' : 'not-allowed',
               transition: 'all 0.2s',
               minHeight: '56px',
               touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent'
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             📸 Start Scanning
@@ -249,7 +240,7 @@ const QRCodeScanner = ({ onScan, onError }) => {
               transition: 'all 0.2s',
               minHeight: '56px',
               touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent'
+              WebkitTapHighlightColor: 'transparent',
             }}
           >
             ⏹️ Stop Scanning
@@ -259,70 +250,89 @@ const QRCodeScanner = ({ onScan, onError }) => {
 
       {/* Instructions - Mobile friendly */}
       {isScanning && (
-        <div style={{
-          textAlign: 'center',
-          padding: '16px',
-          background: '#f7fafc',
-          borderRadius: '8px',
-          maxWidth: '600px',
-          width: '100%'
-        }}>
-          <p style={{ 
-            color: '#667eea',
-            fontSize: '16px',
-            margin: '0 0 8px 0',
-            fontWeight: '600'
-          }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '16px',
+            background: '#f7fafc',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            width: '100%',
+          }}
+        >
+          <p
+            style={{
+              color: '#d4af37',
+              fontSize: '16px',
+              margin: '0 0 8px 0',
+              fontWeight: '600',
+            }}
+          >
             📱 Point your camera at the QR code
           </p>
-          <p style={{
-            color: '#666',
-            fontSize: '14px',
-            margin: '0 0 8px 0'
-          }}>
+          <p
+            style={{
+              color: '#666',
+              fontSize: '14px',
+              margin: '0 0 8px 0',
+            }}
+          >
             Keep the QR code centered within the frame.
           </p>
-          <p style={{
-            color: '#667eea',
-            fontSize: '13px',
-            margin: 0,
-            fontStyle: 'italic'
-          }}>
+          <p
+            style={{
+              color: '#d4af37',
+              fontSize: '13px',
+              margin: 0,
+              fontStyle: 'italic',
+            }}
+          >
             💡 Tip: Hold steady 6-12 inches away. Device will vibrate when scanned.
           </p>
         </div>
       )}
-      
+
       {/* Camera permissions hint */}
       {!isScanning && cameras.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '20px',
-          background: '#fff3cd',
-          borderRadius: '8px',
-          maxWidth: '600px',
-          width: '100%',
-          border: '2px solid #ffc107'
-        }}>
-          <p style={{ 
-            color: '#856404',
-            fontSize: '16px',
-            margin: '0 0 8px 0',
-            fontWeight: '600'
-          }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '20px',
+            background: '#fff3cd',
+            borderRadius: '8px',
+            maxWidth: '600px',
+            width: '100%',
+            border: '2px solid #ffc107',
+          }}
+        >
+          <p
+            style={{
+              color: '#856404',
+              fontSize: '16px',
+              margin: '0 0 8px 0',
+              fontWeight: '600',
+            }}
+          >
             📷 Camera Access Required
           </p>
-          <p style={{
-            color: '#856404',
-            fontSize: '14px',
-            margin: 0
-          }}>
+          <p
+            style={{
+              color: '#856404',
+              fontSize: '14px',
+              margin: 0,
+            }}
+          >
             Please allow camera access in your browser settings to use the QR scanner.
           </p>
         </div>
       )}
     </div>
   );
+};
+
+QRCodeScanner.propTypes = {
+  onScan: PropTypes.func.isRequired,
+  onError: PropTypes.func,
 };
 
 export default QRCodeScanner;

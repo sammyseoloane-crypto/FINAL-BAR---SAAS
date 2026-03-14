@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../supabaseClient'
-import './Auth.css'
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../supabaseClient';
+import './Auth.css';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -11,117 +11,112 @@ export default function Register() {
     confirmPassword: '',
     role: 'customer',
     tenantName: '',
-    selectedTenant: ''
-  })
-  const [availableTenants, setAvailableTenants] = useState([])
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { signUp } = useAuth()
-  const navigate = useNavigate()
+    selectedTenant: '',
+  });
+  const [availableTenants, setAvailableTenants] = useState([]);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
   // Fetch available tenants for customer/staff registration
   useEffect(() => {
     if (formData.role === 'customer' || formData.role === 'staff') {
-      fetchTenants()
+      fetchTenants();
     }
-  }, [formData.role])
+  }, [formData.role]);
 
   const fetchTenants = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('id, name')
-        .order('name')
+      const { data, error } = await supabase.from('tenants').select('id, name').order('name');
 
-      if (error) throw error
-      setAvailableTenants(data || [])
+      if (error) {
+        throw error;
+      }
+      setAvailableTenants(data || []);
     } catch (error) {
-      console.error('Error fetching tenants:', error)
+      console.error('Error fetching tenants:', error);
     }
-  }
+  };
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess(false)
+    e.preventDefault();
+    setError('');
+    setSuccess(false);
 
     // Validation
     if (!formData.email || !formData.password || !formData.confirmPassword) {
-      setError('Please fill in all required fields')
-      return
+      setError('Please fill in all required fields');
+      return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
+      setError('Passwords do not match');
+      return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
+      setError('Password must be at least 6 characters');
+      return;
     }
 
     if (formData.role === 'owner' && !formData.tenantName) {
-      setError('Business name is required for owners')
-      return
+      setError('Business name is required for owners');
+      return;
     }
 
     if ((formData.role === 'customer' || formData.role === 'staff') && !formData.selectedTenant) {
-      setError('Please select a bar location')
-      return
+      setError('Please select a bar location');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const tenantId = formData.selectedTenant || null
-      const tenantName = formData.tenantName || null
+      const tenantId = formData.selectedTenant || null;
+      const tenantName = formData.tenantName || null;
 
       const { error: signUpError } = await signUp(
         formData.email,
         formData.password,
         formData.role,
         tenantId,
-        tenantName
-      )
+        tenantName,
+      );
 
       if (signUpError) {
-        setError(signUpError.message)
+        setError(signUpError.message);
       } else {
-        setSuccess(true)
+        setSuccess(true);
         setTimeout(() => {
-          navigate('/auth/login')
-        }, 3000)
+          navigate('/auth/login');
+        }, 3000);
       }
     } catch (err) {
-      setError(err.message)
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>🍺 Bar SaaS</h1>
+          <img src="/jaive-logo.jpg" alt="Jaive Logo" className="auth-logo" />
           <h2>Create Account</h2>
           <p>Join us and start managing your bar today!</p>
         </div>
 
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
+        {error && <div className="alert alert-error">{error}</div>}
 
         {success && (
           <div className="alert alert-success">
@@ -197,7 +192,7 @@ export default function Register() {
                 ))}
               </select>
               <small>
-                {formData.role === 'staff' 
+                {formData.role === 'staff'
                   ? 'Select the bar you work at (requires manager approval)'
                   : 'Select your preferred bar location'}
               </small>
@@ -233,11 +228,7 @@ export default function Register() {
             />
           </div>
 
-          <button 
-            type="submit" 
-            className="btn btn-primary" 
-            disabled={loading || success}
-          >
+          <button type="submit" className="btn btn-primary" disabled={loading || success}>
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
@@ -249,8 +240,21 @@ export default function Register() {
           <Link to="/auth/login" className="btn btn-secondary">
             Sign In
           </Link>
-        </div>
+          <div style={{ marginTop: '20px', fontSize: '0.85em', color: '#666', textAlign: 'center' }}>
+            By creating an account, you agree to our{' '}
+            <Link to="/terms-of-service" target="_blank" style={{ color: '#d4af37' }}>
+              Terms of Service
+            </Link>
+            {' '}and{' '}
+            <Link to="/privacy-policy" target="_blank" style={{ color: '#d4af37' }}>
+              Privacy Policy
+            </Link>
+            <br />
+            <span style={{ fontSize: '0.9em', marginTop: '8px', display: 'block' }}>
+              🔒 POPIA Compliant - Your data is protected under South African law
+            </span>
+          </div>        </div>
       </div>
     </div>
-  )
+  );
 }

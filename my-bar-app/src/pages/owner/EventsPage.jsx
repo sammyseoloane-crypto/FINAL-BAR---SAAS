@@ -1,97 +1,139 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../../supabaseClient'
-import { useAuth } from '../../contexts/AuthContext'
-import DashboardLayout from '../../components/DashboardLayout'
-import './Pages.css'
+import { useState, useEffect } from 'react';
+import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
+import DashboardLayout from '../../components/DashboardLayout';
+import UsageLimitDisplay from '../../components/UsageLimitDisplay';
+import './Pages.css';
 
 export default function EventsPage() {
-  const { userProfile } = useAuth()
-  const [events, setEvents] = useState([])
-  const [locations, setLocations] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState(null)
+  const { userProfile } = useAuth();
+  const { canPerform } = useSubscription();
+  const [events, setEvents] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     entry_fee: '',
     date: '',
     location_id: '',
-    active: true
-  })
+    active: true,
+  });
+
+  // Check if user can create/delete events (owner/admin only)
+  const canCreateDelete = ['owner', 'admin', 'platform_admin'].includes(userProfile?.role);
+
+  // Helper function to convert ISO datetime to datetime-local format
+  const toDateTimeLocalFormat = (isoString) => {
+    if (!isoString) {
+      return '';
+    }
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   useEffect(() => {
-    fetchEvents()
-    fetchLocations()
-  }, [])
+    fetchEvents();
+    fetchLocations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchEvents = async () => {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*, locations(name)')
+        .select('*, locations!location_id(name)')
         .eq('tenant_id', userProfile.tenant_id)
-        .order('date', { ascending: false })
+        .order('date', { ascending: false });
 
-      if (error) throw error
-      setEvents(data || [])
+      if (error) {
+        throw error;
+      }
+      setEvents(data || []);
     } catch (error) {
-      console.error('Error fetching events:', error)
+      console.error('Error fetching events:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchLocations = async () => {
     try {
       const { data, error } = await supabase
         .from('locations')
         .select('id, name')
-        .eq('tenant_id', userProfile.tenant_id)
+        .eq('tenant_id', userProfile.tenant_id);
 
-      if (error) throw error
-      setLocations(data || [])
+      if (error) {
+        throw error;
+      }
+      setLocations(data || []);
     } catch (error) {
-      console.error('Error fetching locations:', error)
+      console.error('Error fetching locations:', error);
     }
-  }
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
+
+    // Check if user can create more events
+    const canAddEvent = await canPerform('events');
+    if (!canAddEvent) {
+      alert('You have reached your event limit for this month. Please upgrade your plan to create more events.');
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .from('events')
-        .insert([{
+      const { error } = await supabase.from('events').insert([
+        {
           tenant_id: userProfile.tenant_id,
           ...formData,
-          entry_fee: parseFloat(formData.entry_fee) || 0
-        }])
+          entry_fee: parseFloat(formData.entry_fee) || 0,
+        },
+      ]);
 
-      if (error) throw error
-      
-      setFormData({ name: '', description: '', entry_fee: '', date: '', location_id: '', active: true })
-      setShowForm(false)
-      fetchEvents()
+      if (error) {
+        throw error;
+      }
+
+      setFormData({
+        name: '',
+        description: '',
+        entry_fee: '',
+        date: '',
+        location_id: '',
+        active: true,
+      });
+      setShowForm(false);
+      fetchEvents();
     } catch (error) {
-      alert('Error creating event: ' + error.message)
+      alert(`Error creating event: ${error.message}`);
     }
-  }
+  };
 
   const handleEdit = (event) => {
-    setEditingId(event.id)
+    setEditingId(event.id);
     setFormData({
       name: event.name,
       description: event.description || '',
       entry_fee: event.entry_fee.toString(),
-      date: event.date,
+      date: toDateTimeLocalFormat(event.date),
       location_id: event.location_id || '',
-      active: event.active
-    })
-    setShowForm(false) // Close new event form if open
-  }
+      active: event.active,
+    });
+    setShowForm(false); // Close new event form if open
+  };
 
   const handleUpdate = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
       const { error } = await supabase
         .from('events')
@@ -101,55 +143,74 @@ export default function EventsPage() {
           entry_fee: parseFloat(formData.entry_fee) || 0,
           date: formData.date,
           location_id: formData.location_id || null,
-          active: formData.active
+          active: formData.active,
         })
-        .eq('id', editingId)
+        .eq('id', editingId);
 
-      if (error) throw error
+      if (error) {
+        throw error;
+      }
 
-      alert('Event updated successfully!')
-      setEditingId(null)
-      setFormData({ name: '', description: '', entry_fee: '', date: '', location_id: '', active: true })
-      fetchEvents()
+      alert('Event updated successfully!');
+      setEditingId(null);
+      setFormData({
+        name: '',
+        description: '',
+        entry_fee: '',
+        date: '',
+        location_id: '',
+        active: true,
+      });
+      fetchEvents();
     } catch (error) {
-      alert('Error updating event: ' + error.message)
+      alert(`Error updating event: ${error.message}`);
     }
-  }
+  };
 
   const handleCancelEdit = () => {
-    setEditingId(null)
-    setFormData({ name: '', description: '', entry_fee: '', date: '', location_id: '', active: true })
-  }
+    setEditingId(null);
+    setFormData({
+      name: '',
+      description: '',
+      entry_fee: '',
+      date: '',
+      location_id: '',
+      active: true,
+    });
+  };
 
   const toggleActive = async (id, currentStatus) => {
     try {
       const { error } = await supabase
         .from('events')
         .update({ active: !currentStatus })
-        .eq('id', id)
+        .eq('id', id);
 
-      if (error) throw error
-      fetchEvents()
+      if (error) {
+        throw error;
+      }
+      fetchEvents();
     } catch (error) {
-      alert('Error updating event: ' + error.message)
+      alert(`Error updating event: ${error.message}`);
     }
-  }
+  };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this event?')) return
+    if (!confirm('Are you sure you want to delete this event?')) {
+      return;
+    }
 
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', id)
+      const { error } = await supabase.from('events').delete().eq('id', id);
 
-      if (error) throw error
-      fetchEvents()
+      if (error) {
+        throw error;
+      }
+      fetchEvents();
     } catch (error) {
-      alert('Error deleting event: ' + error.message)
+      alert(`Error deleting event: ${error.message}`);
     }
-  }
+  };
 
   return (
     <DashboardLayout>
@@ -159,16 +220,23 @@ export default function EventsPage() {
           <p>Create and manage bar events</p>
         </div>
 
+        {/* Usage Limit Display */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <UsageLimitDisplay limitType="events" />
+        </div>
+
         <div className="action-bar">
           <div className="search-bar">
             <input type="text" placeholder="Search events..." />
           </div>
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-            + Create Event
-          </button>
+          {canCreateDelete && (
+            <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+              + Create Event
+            </button>
+          )}
         </div>
 
-        {showForm && (
+        {showForm && canCreateDelete && (
           <div className="card">
             <div className="card-header">
               <h3>New Event</h3>
@@ -181,7 +249,7 @@ export default function EventsPage() {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -189,11 +257,13 @@ export default function EventsPage() {
                     <label>Location</label>
                     <select
                       value={formData.location_id}
-                      onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     >
                       <option value="">Select location</option>
                       {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -202,7 +272,7 @@ export default function EventsPage() {
                   <label>Description</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="grid-2">
@@ -212,7 +282,7 @@ export default function EventsPage() {
                       type="number"
                       step="0.01"
                       value={formData.entry_fee}
-                      onChange={(e) => setFormData({...formData, entry_fee: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, entry_fee: e.target.value })}
                     />
                   </div>
                   <div className="form-group">
@@ -220,7 +290,7 @@ export default function EventsPage() {
                     <input
                       type="datetime-local"
                       value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       required
                     />
                   </div>
@@ -230,14 +300,20 @@ export default function EventsPage() {
                     <input
                       type="checkbox"
                       checked={formData.active}
-                      onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                    />
-                    {' '}Active (visible to customers)
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                    />{' '}
+                    Active (visible to customers)
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit" className="btn btn-primary">Create Event</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>
+                  <button type="submit" className="btn btn-primary">
+                    Create Event
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowForm(false)}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -259,7 +335,7 @@ export default function EventsPage() {
                     <input
                       type="text"
                       value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
                   </div>
@@ -267,11 +343,13 @@ export default function EventsPage() {
                     <label>Location</label>
                     <select
                       value={formData.location_id}
-                      onChange={(e) => setFormData({...formData, location_id: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                     >
                       <option value="">Select location</option>
                       {locations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -280,7 +358,7 @@ export default function EventsPage() {
                   <label>Description</label>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
                 <div className="grid-2">
@@ -290,7 +368,7 @@ export default function EventsPage() {
                       type="number"
                       step="0.01"
                       value={formData.entry_fee}
-                      onChange={(e) => setFormData({...formData, entry_fee: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, entry_fee: e.target.value })}
                     />
                   </div>
                   <div className="form-group">
@@ -298,7 +376,7 @@ export default function EventsPage() {
                     <input
                       type="datetime-local"
                       value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                       required
                     />
                   </div>
@@ -308,13 +386,15 @@ export default function EventsPage() {
                     <input
                       type="checkbox"
                       checked={formData.active}
-                      onChange={(e) => setFormData({...formData, active: e.target.checked})}
-                    />
-                    {' '}Active (visible to customers)
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                    />{' '}
+                    Active (visible to customers)
                   </label>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="submit" className="btn btn-primary">Update Event</button>
+                  <button type="submit" className="btn btn-primary">
+                    Update Event
+                  </button>
                   <button type="button" className="btn btn-secondary" onClick={handleCancelEdit}>
                     Cancel
                   </button>
@@ -354,32 +434,35 @@ export default function EventsPage() {
                       <td>{new Date(event.date).toLocaleString()}</td>
                       <td>R {event.entry_fee}</td>
                       <td>
-                        <span className={`status-badge status-${event.active ? 'active' : 'inactive'}`}>
+                        <span
+                          className={`status-badge status-${event.active ? 'active' : 'inactive'}`}
+                        >
                           {event.active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => handleEdit(event)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          style={{ marginRight: '5px', padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => toggleActive(event.id, event.active)}
-                        >
-                          {event.active ? 'Deactivate' : 'Activate'}
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: '5px 10px', fontSize: '0.85em' }}
-                          onClick={() => handleDelete(event.id)}
-                        >
-                          Delete
-                        </button>
+                        <div className="action-buttons">
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleEdit(event)}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => toggleActive(event.id, event.active)}
+                          >
+                            {event.active ? '⏸️ Deactivate' : '▶️ Activate'}
+                          </button>
+                          {canCreateDelete && (
+                            <button
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDelete(event.id)}
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -390,5 +473,5 @@ export default function EventsPage() {
         )}
       </div>
     </DashboardLayout>
-  )
+  );
 }

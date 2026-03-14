@@ -28,13 +28,15 @@ export const createTransaction = async (tenantId, userId, productId, amount) => 
           user_id: userId,
           product_id: productId,
           amount: amount,
-          status: 'pending'
-        }
+          status: 'pending',
+        },
       ])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error creating transaction:', error);
@@ -48,23 +50,21 @@ export const createTransaction = async (tenantId, userId, productId, amount) => 
  */
 export const confirmTransaction = async (transactionId, staffUserId) => {
   try {
-    console.log('[Confirm Transaction] 🔄 Confirming transaction:', transactionId);
-    
     // Start a transaction to update transaction and create QR code
     const { data: transaction, error: txError } = await supabase
       .from('transactions')
       .update({
         status: 'confirmed',
         confirmed_by: staffUserId,
-        confirmed_at: new Date().toISOString()
+        confirmed_at: new Date().toISOString(),
       })
       .eq('id', transactionId)
       .select()
       .single();
 
-    if (txError) throw txError;
-    
-    console.log('[Confirm Transaction] ✅ Transaction confirmed:', transaction);
+    if (txError) {
+      throw txError;
+    }
 
     // Check if QR code already exists for this transaction (prevent duplicates)
     const { data: existingQR } = await supabase
@@ -72,24 +72,17 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       .select('id, code')
       .eq('transaction_id', transaction.id)
       .single();
-    
+
     if (existingQR) {
-      console.log('[Confirm Transaction] ⚠️ QR code already exists for transaction:', existingQR);
-      return { 
-        transaction, 
-        qrCode: existingQR, 
-        error: null 
+      return {
+        transaction,
+        qrCode: existingQR,
+        error: null,
       };
     }
 
     // Generate QR code for this transaction
-    const qrCodeString = generateQRCode(
-      transaction.tenant_id,
-      transaction.user_id,
-      transaction.id
-    );
-    
-    console.log('[Confirm Transaction] 🎫 Generated QR code string:', qrCodeString);
+    const qrCodeString = generateQRCode(transaction.tenant_id, transaction.user_id, transaction.id);
 
     const { data: qrCode, error: qrError } = await supabase
       .from('qr_codes')
@@ -97,8 +90,8 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
         {
           transaction_id: transaction.id,
           user_id: transaction.user_id,
-          code: qrCodeString
-        }
+          code: qrCodeString,
+        },
       ])
       .select()
       .single();
@@ -107,13 +100,11 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
       console.error('[Confirm Transaction] ❌ Failed to create QR code:', qrError);
       throw qrError;
     }
-    
-    console.log('[Confirm Transaction] ✅ QR code created successfully:', qrCode);
 
-    return { 
-      transaction, 
-      qrCode, 
-      error: null 
+    return {
+      transaction,
+      qrCode,
+      error: null,
     };
   } catch (error) {
     console.error('[Confirm Transaction] ❌ Error confirming transaction:', error);
@@ -127,18 +118,18 @@ export const confirmTransaction = async (transactionId, staffUserId) => {
 export const bulkConfirmTransactions = async (transactionIds, staffUserId) => {
   try {
     const results = await Promise.all(
-      transactionIds.map(id => confirmTransaction(id, staffUserId))
+      transactionIds.map((id) => confirmTransaction(id, staffUserId)),
     );
 
-    const successful = results.filter(r => !r.error);
-    const failed = results.filter(r => r.error);
+    const successful = results.filter((r) => !r.error);
+    const failed = results.filter((r) => r.error);
 
-    return { 
-      successful, 
+    return {
+      successful,
       failed,
       total: transactionIds.length,
       successCount: successful.length,
-      failCount: failed.length
+      failCount: failed.length,
     };
   } catch (error) {
     console.error('Error bulk confirming transactions:', error);
@@ -158,7 +149,9 @@ export const cancelTransaction = async (transactionId) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error cancelling transaction:', error);
@@ -173,25 +166,29 @@ export const getPendingTransactions = async (tenantId) => {
   try {
     const { data, error } = await supabase
       .from('transactions')
-      .select(`
+      .select(
+        `
         *,
-        users!transactions_user_id_fkey (
+        users:profiles!user_id (
           id,
           full_name,
           email
         ),
-        products (
+        products!product_id (
           id,
           name,
           price,
           type
         )
-      `)
+      `,
+      )
       .eq('tenant_id', tenantId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error fetching pending transactions:', error);
@@ -206,24 +203,32 @@ export const getTransactions = async (tenantId, filters = {}) => {
   try {
     let query = supabase
       .from('transactions')
-      .select(`
+      .select(
+        `
         *,
-        users!transactions_user_id_fkey (
+        users:profiles!user_id (
           id,
           full_name,
           email
         ),
-        products (
+        products!product_id (
           id,
           name,
           price,
           type
         ),
-        confirmed_user:users!transactions_confirmed_by_fkey (
+        events!event_id (
+          id,
+          name,
+          date,
+          active
+        ),
+        confirmed_user:profiles!confirmed_by (
           id,
           full_name
         )
-      `)
+      `,
+      )
       .eq('tenant_id', tenantId);
 
     // Apply filters
@@ -247,7 +252,9 @@ export const getTransactions = async (tenantId, filters = {}) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error fetching transactions:', error);
@@ -262,9 +269,10 @@ export const getMyTransactions = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('transactions')
-      .select(`
+      .select(
+        `
         *,
-        products (
+        products!product_id (
           id,
           name,
           price,
@@ -277,11 +285,14 @@ export const getMyTransactions = async (userId) => {
           scanned_at,
           created_at
         )
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error fetching my transactions:', error);
@@ -296,7 +307,8 @@ export const getQRCodeForTransaction = async (transactionId) => {
   try {
     const { data, error } = await supabase
       .from('qr_codes')
-      .select(`
+      .select(
+        `
         *,
         transactions (
           id,
@@ -308,12 +320,15 @@ export const getQRCodeForTransaction = async (transactionId) => {
             type
           )
         )
-      `)
+      `,
+      )
       .eq('transaction_id', transactionId)
       .is('scanned_at', null) // Only unscanned codes
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error fetching QR code:', error);
@@ -328,7 +343,8 @@ export const getMyQRCodes = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('qr_codes')
-      .select(`
+      .select(
+        `
         *,
         transactions (
           id,
@@ -341,12 +357,15 @@ export const getMyQRCodes = async (userId) => {
             description
           )
         )
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .is('scanned_at', null) // Only unscanned codes
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return { data, error: null };
   } catch (error) {
     console.error('Error fetching my QR codes:', error);
@@ -357,12 +376,13 @@ export const getMyQRCodes = async (userId) => {
 /**
  * Validate and scan a QR code (staff scans at door)
  */
-export const scanQRCode = async (qrCodeString, scannedByUserId) => {
+export const scanQRCode = async (qrCodeString, _scannedByUserId) => {
   try {
     // First, verify the QR code exists and is valid
     const { data: qrCode, error: fetchError } = await supabase
       .from('qr_codes')
-      .select(`
+      .select(
+        `
         *,
         transactions (
           id,
@@ -375,19 +395,17 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
             type
           )
         )
-      `)
+      `,
+      )
       .eq('code', qrCodeString)
       .single();
 
     if (fetchError) {
-      console.log('[QR Scanner] ❌ QR code not found in database');
-      console.log('[QR Scanner] 📝 Scanned code:', qrCodeString);
-      console.log('[QR Scanner] ⚠️ Error:', fetchError);
-      return { 
-        data: null, 
+      return {
+        data: null,
         error: fetchError,
         message: 'Invalid QR code - Not found in system',
-        notFound: true
+        notFound: true,
       };
     }
 
@@ -397,64 +415,56 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
       .select('id, email')
       .eq('id', qrCode.user_id)
       .single();
-    
+
     // Attach user profile to response if found
     if (userProfile) {
       qrCode.user_profile = userProfile;
     }
-    
+
     // If transaction has product_id but no product data (join failed), fetch product separately
     if (qrCode.transactions?.product_id && !qrCode.transactions?.products) {
-      console.log('[QR Scanner] 🔍 Product join failed, fetching product separately...');
       const { data: product } = await supabase
         .from('products')
         .select('name, type')
         .eq('id', qrCode.transactions.product_id)
         .single();
-      
+
       if (product) {
-        console.log('[QR Scanner] ✅ Product fetched:', product);
         qrCode.transactions.products = product;
-      } else {
-        console.log('[QR Scanner] ⚠️ Product not found in products table');
       }
     }
-    
-    console.log('[QR Scanner] ✅ QR code found in database');
-    console.log('[QR Scanner] 📦 QR Code data:', qrCode);
-    console.log('[QR Scanner] 👤 User profile:', userProfile);
 
     // Check if QR code has expired (24 hours after creation)
     const createdAt = new Date(qrCode.created_at);
     const now = new Date();
     const hoursSinceCreation = (now - createdAt) / (1000 * 60 * 60);
-    
+
     if (hoursSinceCreation > 24) {
-      return { 
-        data: qrCode, 
+      return {
+        data: qrCode,
         error: null,
         message: 'QR code has expired (valid for 24 hours only)',
-        expired: true 
+        expired: true,
       };
     }
 
     // Check if already scanned
     if (qrCode.scanned_at) {
-      return { 
-        data: qrCode, 
+      return {
+        data: qrCode,
         error: null,
         message: 'Invalid Code, Already scanned',
-        alreadyScanned: true 
+        alreadyScanned: true,
       };
     }
 
     // Check if transaction is confirmed
     if (qrCode.transactions.status !== 'confirmed') {
-      return { 
-        data: qrCode, 
+      return {
+        data: qrCode,
         error: null,
         message: 'Transaction not confirmed yet',
-        notConfirmed: true 
+        notConfirmed: true,
       };
     }
 
@@ -463,7 +473,8 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
       .from('qr_codes')
       .update({ scanned_at: new Date().toISOString() })
       .eq('id', qrCode.id)
-      .select(`
+      .select(
+        `
         *,
         transactions (
           id,
@@ -476,45 +487,44 @@ export const scanQRCode = async (qrCodeString, scannedByUserId) => {
             type
           )
         )
-      `)
+      `,
+      )
       .single();
 
-    if (updateError) throw updateError;
-    
+    if (updateError) {
+      throw updateError;
+    }
+
     // If transaction has product_id but no product data (join failed), fetch product separately
     if (updatedQR.transactions?.product_id && !updatedQR.transactions?.products) {
-      console.log('[QR Scanner] 🔍 Product join failed on update, fetching product separately...');
       const { data: product } = await supabase
         .from('products')
         .select('name, type')
         .eq('id', updatedQR.transactions.product_id)
         .single();
-      
+
       if (product) {
-        console.log('[QR Scanner] ✅ Product fetched on update:', product);
         updatedQR.transactions.products = product;
-      } else {
-        console.log('[QR Scanner] ⚠️ Product not found in products table on update');
       }
     }
-    
+
     // Attach user profile to updated QR (already fetched above)
     if (userProfile) {
       updatedQR.user_profile = userProfile;
     }
 
-    return { 
-      data: updatedQR, 
+    return {
+      data: updatedQR,
       error: null,
       message: 'Scanned',
-      success: true 
+      success: true,
     };
   } catch (error) {
     console.error('Error scanning QR code:', error);
-    return { 
-      data: null, 
+    return {
+      data: null,
       error,
-      message: 'Error scanning QR code' 
+      message: 'Error scanning QR code',
     };
   }
 };
@@ -529,19 +539,21 @@ export const getTransactionStats = async (tenantId) => {
       .select('*')
       .eq('tenant_id', tenantId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     const stats = {
       total: data.length,
-      pending: data.filter(t => t.status === 'pending').length,
-      confirmed: data.filter(t => t.status === 'confirmed').length,
-      cancelled: data.filter(t => t.status === 'cancelled').length,
+      pending: data.filter((t) => t.status === 'pending').length,
+      confirmed: data.filter((t) => t.status === 'confirmed').length,
+      cancelled: data.filter((t) => t.status === 'cancelled').length,
       totalRevenue: data
-        .filter(t => t.status === 'confirmed')
+        .filter((t) => t.status === 'confirmed')
         .reduce((sum, t) => sum + parseFloat(t.amount), 0),
       pendingRevenue: data
-        .filter(t => t.status === 'pending')
-        .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+        .filter((t) => t.status === 'pending')
+        .reduce((sum, t) => sum + parseFloat(t.amount), 0),
     };
 
     return { data: stats, error: null };

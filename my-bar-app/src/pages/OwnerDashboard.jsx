@@ -1,15 +1,38 @@
-import { useAuth } from '../contexts/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import './Dashboard.css'
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNotification } from '../contexts/NotificationContext';
+import { useEffect } from 'react';
+import PlanBadge from '../components/PlanBadge';
+import './Dashboard.css';
 
 export default function OwnerDashboard() {
-  const { userProfile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { userProfile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const notification = useNotification();
+
+  // Handle success/cancel redirects from Stripe
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const canceled = searchParams.get('canceled');
+
+    if (success === 'true') {
+      notification.success('🎉 Subscription activated successfully! Your payment is being processed.');
+      // Clear the URL parameter
+      searchParams.delete('success');
+      setSearchParams(searchParams, { replace: true });
+    } else if (canceled === 'true') {
+      notification.warning('⚠️ Subscription upgrade was canceled. You can try again anytime.');
+      // Clear the URL parameter
+      searchParams.delete('canceled');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, notification]);
 
   const handleSignOut = async () => {
-    await signOut()
-    navigate('/auth/login')
-  }
+    await signOut();
+    navigate('/auth/login');
+  };
 
   return (
     <div className="dashboard-container">
@@ -17,6 +40,7 @@ export default function OwnerDashboard() {
         <div className="nav-brand">
           <h1>🍺 Bar SaaS</h1>
           <span className="role-badge role-owner">Owner</span>
+          <PlanBadge />
         </div>
         <button onClick={handleSignOut} className="btn-signout">
           Sign Out
@@ -27,9 +51,7 @@ export default function OwnerDashboard() {
         <div className="dashboard-header">
           <h2>Owner Dashboard</h2>
           <p>Welcome back, {userProfile?.email}!</p>
-          {userProfile?.tenant_name && (
-            <p className="company-name">🏢 {userProfile.tenant_name}</p>
-          )}
+          {userProfile?.tenant_name && <p className="company-name">🏢 {userProfile.tenant_name}</p>}
         </div>
 
         <div className="dashboard-grid">
@@ -37,10 +59,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">📊</div>
             <h3>Analytics</h3>
             <p>View sales reports and business insights</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/reports')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/reports')}>
               View Reports
             </button>
           </div>
@@ -49,10 +68,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">📍</div>
             <h3>Locations</h3>
             <p>Manage your bar locations</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/locations')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/locations')}>
               Manage Locations
             </button>
           </div>
@@ -61,10 +77,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">👥</div>
             <h3>Staff Management</h3>
             <p>Add and manage staff members</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/staff')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/staff')}>
               Manage Staff
             </button>
           </div>
@@ -73,10 +86,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">🍺</div>
             <h3>Products</h3>
             <p>Manage drinks and food menu</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/products')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/products')}>
               Manage Products
             </button>
           </div>
@@ -85,10 +95,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">🎉</div>
             <h3>Events</h3>
             <p>Create and manage bar events</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/events')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/events')}>
               Manage Events
             </button>
           </div>
@@ -97,10 +104,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">📝</div>
             <h3>Tasks</h3>
             <p>Assign and track staff tasks</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/tasks')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/tasks')}>
               Manage Tasks
             </button>
           </div>
@@ -109,10 +113,7 @@ export default function OwnerDashboard() {
             <div className="card-icon">💳</div>
             <h3>Transactions</h3>
             <p>View all customer transactions</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/transactions')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/transactions')}>
               View Transactions
             </button>
           </div>
@@ -120,11 +121,8 @@ export default function OwnerDashboard() {
           <div className="dashboard-card">
             <div className="card-icon">📬</div>
             <h3>Email Logs</h3>
-            <p>Monitor verification and notification emails</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/email-logs')}
-            >
+            <p>View email delivery logs</p>
+            <button className="btn-card" onClick={() => navigate('/owner/email-logs')}>
               View Email Logs
             </button>
           </div>
@@ -133,15 +131,12 @@ export default function OwnerDashboard() {
             <div className="card-icon">⚙️</div>
             <h3>Settings</h3>
             <p>Configure business settings</p>
-            <button 
-              className="btn-card"
-              onClick={() => navigate('/owner/subscription')}
-            >
+            <button className="btn-card" onClick={() => navigate('/owner/subscription')}>
               Settings
             </button>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
