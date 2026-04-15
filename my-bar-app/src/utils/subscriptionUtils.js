@@ -33,22 +33,22 @@ export const TIER_INFO = {
   },
   starter: {
     name: '💰 Starter Plan',
-    price: 'R799 - R1,200 /month',
+    price: 'R1,200 /month',
     color: 'blue',
   },
   growth: {
-    name: '🍸 Growth Plan',
-    price: 'R2,000 - R3,500 /month',
+    name: '🍸 Growth Plan ⭐',
+    price: 'R2,900 /month',
     color: 'green',
   },
   pro: {
     name: '🏆 Pro Nightclub Plan',
-    price: 'R4,000 - R7,000 /month',
+    price: 'R5,900 /month',
     color: 'purple',
   },
   enterprise: {
     name: '👑 Enterprise Venue Plan',
-    price: 'R10,000+ /month',
+    price: 'R9,500 /month',
     color: 'gold',
   },
 };

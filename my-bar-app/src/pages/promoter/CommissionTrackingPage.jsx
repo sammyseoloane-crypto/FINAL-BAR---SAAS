@@ -35,7 +35,7 @@ export default function CommissionTrackingPage() {
         throw error;
       }
 
-      const totalGuests = guestLists.reduce((sum, list) => sum + (list.total_guests || 0), 0);
+      const totalGuests = guestLists.reduce((sum, list) => sum + (list.current_guest_count || 0), 0);
       const checkedIn = guestLists.reduce((sum, list) => sum + (list.checked_in_count || 0), 0);
 
       // Calculate estimated revenue (example: $20 per checked-in guest)

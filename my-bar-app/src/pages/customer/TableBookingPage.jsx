@@ -23,13 +23,182 @@ export default function TableBookingPage() {
   const [view, setView] = useState('tables'); // 'tables', 'book', 'my-reservations'
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
 
   useEffect(() => {
+    console.log('🔵 TableBookingPage useEffect triggered');
+    console.log('🔵 User:', user ? 'Logged in' : 'Not logged in');
+    console.log('🔵 UserProfile:', userProfile ? 'Loaded' : 'Not loaded');
+
     if (user && userProfile) {
       loadData();
+
+      // Check if returning from successful payment
+      const urlParams = new URLSearchParams(window.location.search);
+      const success = urlParams.get('success');
+      const sessionId = urlParams.get('session_id');
+
+      console.log('🔵 URL params:', { success, sessionId });
+
+      if (success === 'true' && sessionId) {
+        console.log('🎯 PAYMENT SUCCESS DETECTED - Calling handlePaymentSuccess');
+        handlePaymentSuccess(sessionId);
+      } else {
+        console.log('ℹ️ Not a payment return page (normal page load)');
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, userProfile]);
+
+  const handlePaymentSuccess = async (sessionId) => {
+    console.log('🔄 handlePaymentSuccess called with sessionId:', sessionId);
+
+    try {
+      // Try to get pending reservation from sessionStorage (persists across Stripe redirect)
+      let pendingReservationData = sessionStorage.getItem('pending_reservation');
+      console.log('📦 sessionStorage data:', pendingReservationData ? 'Found' : 'NOT FOUND');
+
+      // If sessionStorage is empty (cleared by redirect), retrieve from Stripe session
+      if (!pendingReservationData) {
+        console.log('🔄 sessionStorage empty, retrieving from Stripe session...');
+
+        try {
+          // Call Edge Function to retrieve Stripe session data
+          const { data: sessionData, error: sessionError } = await supabase.functions.invoke('get-checkout-session', {
+            body: { sessionId },
+          });
+
+          if (sessionError) {
+            throw sessionError;
+          }
+
+          if (sessionData && sessionData.metadata && sessionData.metadata.checkoutType === 'table_deposit') {
+            console.log('✅ Retrieved reservation data from Stripe session');
+
+            // Reconstruct pending reservation from Stripe metadata and sessionStorage backup
+            const storedData = sessionStorage.getItem(`reservation_backup_${sessionId}`);
+            if (storedData) {
+              pendingReservationData = storedData;
+              console.log('✅ Found backup reservation data');
+            } else {
+              // Fallback: use what we can from Stripe metadata
+              console.warn('⚠️ No backup data found, using minimal Stripe metadata');
+              pendingReservationData = JSON.stringify({
+                table_id: sessionData.metadata.tableId,
+                table_name: sessionData.metadata.tableName,
+                deposit_amount: parseFloat(sessionData.metadata.depositAmount),
+                stripe_session_id: sessionId,
+                guest_count: 4, // Default
+                reservation_datetime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
+              });
+            }
+          }
+        } catch (err) {
+          console.error('❌  Error retrieving Stripe session:', err);
+        }
+      }
+
+      if (!pendingReservationData) {
+        const errorMsg = 'Payment succeeded but reservation details were lost. Please contact support with session ID: ' + sessionId;
+        console.error('❌ No pending reservation data found');
+        setErrorMessage(errorMsg);
+        return;
+      }
+
+      const reservationData = JSON.parse(pendingReservationData);
+      console.log('📋 Reservation data:', {
+        table_name: reservationData.table_name,
+        stripe_session_id: reservationData.stripe_session_id,
+        deposit_amount: reservationData.deposit_amount      });
+
+      // Verify session ID matches
+      if (reservationData.stripe_session_id !== sessionId) {
+        const errorMsg = `❌ Session ID mismatch! Expected: ${reservationData.stripe_session_id}, Got: ${sessionId}`;
+        console.error(errorMsg);
+        setErrorMessage('Payment verification failed. Please contact support.');
+        return;
+      }
+
+      console.log('✅ Session ID verified');
+
+      // Get table data
+      const { data: table, error: tableError } = await supabase
+        .from('tables')
+        .select('*')
+        .eq('id', reservationData.table_id)
+        .single();
+
+      if (tableError || !table) {
+        console.error('❌ Table fetch error:', tableError);
+        throw new Error('Table not found: ' + (tableError?.message || 'Unknown error'));
+      }
+
+      console.log('✅ Table found:', table.name);
+
+      // Create reservation with deposit marked as paid
+      const endDatetime = new Date(new Date(reservationData.reservation_datetime).getTime() + 2 * 60 * 60 * 1000);
+
+      const newReservation = {
+        tenant_id: userProfile.tenant_id,
+        table_id: reservationData.table_id,
+        user_id: user.id,
+        event_id: reservationData.event_id || null,
+        location_id: userProfile.location_id || null,
+        reservation_date: reservationData.reservation_date,
+        reservation_time: reservationData.reservation_time,
+        reservation_datetime: reservationData.reservation_datetime,
+        duration_hours: 2.0,
+        end_datetime: endDatetime.toISOString(),
+        guest_count: reservationData.guest_count,
+        contact_phone: reservationData.contact_phone,
+        contact_email: user.email,
+        deposit_amount: reservationData.deposit_amount,
+        deposit_paid: true,
+        deposit_paid_at: new Date().toISOString(),
+        minimum_spend: reservationData.minimum_spend,
+        special_requests: reservationData.special_requests,
+        status: 'confirmed', // Confirmed immediately since deposit is paid
+        metadata: {
+          stripe_session_id: sessionId,
+          payment_completed_at: new Date().toISOString(),
+        },
+      };
+
+      const { error: insertError } = await supabase
+        .from('table_reservations')
+        .insert([newReservation]);
+
+      if (insertError) {
+        console.error('❌ Reservation creation failed:', insertError);
+        throw insertError;
+      }
+
+      // Wait a moment for the trigger to update table status
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Wait for trigger to update table status
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Clean up
+      sessionStorage.removeItem('pending_reservation');
+
+      await loadData();
+
+      setSuccessMessage(`✅ Payment successful! Table ${reservationData.table_name} is now reserved for you.`);
+      setView('my-reservations');
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 5000);
+
+    } catch (error) {
+      console.error('❌ Reservation creation error:', error.message);
+      setErrorMessage(`Payment received but reservation creation failed. Please contact support with session ID: ${sessionId}`);
+      setView('my-reservations');
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -64,6 +233,14 @@ export default function TableBookingPage() {
       }
 
       setEvents(eventsData || []);
+
+      // Check and mark any no-shows (expired reservations past grace period)
+      try {
+        await supabase.rpc('check_and_mark_no_shows');
+      } catch (noShowError) {
+        console.warn('Could not check no-shows:', noShowError);
+        // Non-critical, continue loading data
+      }
 
       // Load user's reservations
       const { data: reservationsData, error: reservationsError } = await supabase
@@ -117,82 +294,160 @@ export default function TableBookingPage() {
       // Combine date and time
       const reservationDatetime = new Date(`${reservationDate}T${reservationTime}`);
 
-      // Check if table is available
-      const { data: existingReservations, error: checkError } = await supabase
-        .from('table_reservations')
-        .select('id')
-        .eq('table_id', selectedTable.id)
-        .eq('reservation_date', reservationDate)
-        .in('status', ['pending', 'confirmed', 'checked_in'])
-        .gte('end_datetime', reservationDatetime.toISOString())
-        .lte('reservation_datetime', new Date(reservationDatetime.getTime() + 2 * 60 * 60 * 1000).toISOString());
+      // Check if table is available using the database function
+      const { data: isAvailable, error: availError } = await supabase
+        .rpc('is_table_available', {
+          p_table_id: selectedTable.id,
+          p_reservation_datetime: reservationDatetime.toISOString(),
+          p_duration_hours: 2.0,
+        });
 
-      if (checkError) {
-        throw checkError;
+      if (availError) {
+        throw availError;
       }
 
-      if (existingReservations && existingReservations.length > 0) {
+      if (!isAvailable) {
         throw new Error('This table is already reserved for the selected time. Please choose another time or table.');
       }
 
-      // Create reservation
-      const endDatetime = new Date(reservationDatetime.getTime() + 2 * 60 * 60 * 1000); // 2 hour default
+      const depositAmount = selectedTable.deposit_amount || 0;
 
-      const reservationData = {
-        tenant_id: userProfile.tenant_id,
-        table_id: selectedTable.id,
-        user_id: user.id,
-        event_id: selectedEvent || null,
-        location_id: userProfile.location_id || null,
-        reservation_date: reservationDate,
-        reservation_time: reservationTime,
-        reservation_datetime: reservationDatetime.toISOString(),
-        duration_hours: 2.0,
-        end_datetime: endDatetime.toISOString(),
-        guest_count: guestCount,
-        contact_phone: contactPhone || userProfile.phone || '',
-        contact_email: user.email,
-        deposit_amount: selectedTable.deposit_amount || 0,
-        minimum_spend: selectedTable.minimum_spend || 0,
-        special_requests: specialRequests,
-        status: 'pending',
-      };
+      // If deposit required, process payment first
+      if (depositAmount > 0) {
+        setPaymentProcessing(true);
+        setLoading(false); // Remove general loading while payment processes
 
-      const { error: insertError } = await supabase
-        .from('table_reservations')
-        .insert([reservationData])
-        .select()
-        .single();
+        try {
+          // Create Stripe checkout session via Edge Function using cart format
+          const { data: session, error: sessionError } = await supabase.functions.invoke('create-checkout-session', {
+            body: {
+              cartItems: [{
+                id: selectedTable.id,
+                name: `Table Deposit - ${selectedTable.name}`,
+                type: 'table_deposit',
+                price: depositAmount,
+                quantity: 1,
+                tenant_id: userProfile.tenant_id,
+                productType: 'Table Reservation Deposit',
+                date: reservationDate,
+              }],
+              totalAmount: depositAmount,
+              userId: user.id,
+              tenantId: userProfile.tenant_id,
+            },
+          });
 
-      if (insertError) {
-        throw insertError;
+          if (sessionError) {
+            throw new Error(`Failed to create payment session: ${sessionError.message}`);
+          }
+
+          if (!session || !session.url) {
+            throw new Error('No payment URL received');
+          }
+
+          // Store reservation details in sessionStorage to complete after payment
+          // sessionStorage persists across Stripe redirect (unlike localStorage in some browsers)
+          const pendingReservation = {
+            table_id: selectedTable.id,
+            table_name: selectedTable.name,
+            reservation_date: reservationDate,
+            reservation_time: reservationTime,
+            reservation_datetime: reservationDatetime.toISOString(),
+            guest_count: guestCount,
+            contact_phone: contactPhone || userProfile.phone || '',
+            special_requests: specialRequests,
+            event_id: selectedEvent || null,
+            deposit_amount: depositAmount,
+            minimum_spend: selectedTable.minimum_spend || 0,
+            stripe_session_id: session.sessionId,
+          };
+
+          console.log('💾 SAVING to sessionStorage:', pendingReservation);
+          sessionStorage.setItem('pending_reservation', JSON.stringify(pendingReservation));
+
+          // Verify it was saved
+          const verification = sessionStorage.getItem('pending_reservation');
+          console.log('✅ VERIFIED sessionStorage saved:', verification ? 'YES' : 'NO');
+          console.log('✅ Data length:', verification ? verification.length : 0);
+
+          // Redirect to Stripe Checkout
+          console.log('🔀 Redirecting to Stripe:', session.url);
+          window.location.href = session.url;
+          return; // Don't continue, user will be redirected
+        } catch (paymentError) {
+          setPaymentProcessing(false);
+          setLoading(false);
+          throw paymentError;
+        }
       }
 
-      setSuccessMessage(`Table ${selectedTable.name} reserved successfully! Your reservation is pending confirmation.`);
+      // No deposit required, create reservation directly
+      await createReservation(selectedTable, reservationDatetime, depositAmount, true);
 
-      // Reset form
-      setSelectedTable(null);
-      setSelectedEvent(null);
-      setReservationDate('');
-      setReservationTime('20:00');
-      setGuestCount(4);
-      setSpecialRequests('');
-
-      // Reload reservations
-      await loadData();
-
-      // Switch to my reservations view
-      setTimeout(() => {
-        setView('my-reservations');
-        setSuccessMessage('');
-      }, 2000);
 
     } catch (error) {
       console.error('Error creating reservation:', error);
       setErrorMessage(error.message || 'Failed to create reservation');
     } finally {
       setLoading(false);
+      setPaymentProcessing(false);
     }
+  };
+
+  const createReservation = async (table, reservationDatetime, depositAmount, depositPaid = false) => {
+    const endDatetime = new Date(reservationDatetime.getTime() + 2 * 60 * 60 * 1000); // 2 hour default
+
+    const reservationData = {
+      tenant_id: userProfile.tenant_id,
+      table_id: table.id,
+      user_id: user.id,
+      event_id: selectedEvent || null,
+      location_id: userProfile.location_id || null,
+      reservation_date: reservationDate,
+      reservation_time: reservationTime,
+      reservation_datetime: reservationDatetime,
+      duration_hours: 2.0,
+      end_datetime: endDatetime.toISOString(),
+      guest_count: guestCount,
+      contact_phone: contactPhone || userProfile.phone || '',
+      contact_email: user.email,
+      deposit_amount: depositAmount,
+      deposit_paid: depositPaid,
+      deposit_paid_at: depositPaid ? new Date().toISOString() : null,
+      minimum_spend: table.minimum_spend || 0,
+      special_requests: specialRequests,
+      status: 'confirmed', // Confirmed immediately if deposit paid
+    };
+
+    const { data: newReservation, error: insertError } = await supabase
+      .from('table_reservations')
+      .insert([reservationData])
+      .select()
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    // Wait for trigger to update table status
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    setSuccessMessage(`Table ${table.name} reserved successfully! ${depositPaid ? 'Deposit paid.' : ''}`);
+
+    // Reset form
+    setSelectedTable(null);
+    setSelectedEvent(null);
+    setReservationDate('');
+    setReservationTime('20:00');
+    setGuestCount(4);
+    setSpecialRequests('');
+
+
+    // Switch to my reservations view
+    setTimeout(() => {
+      setView('my-reservations');
+      setSuccessMessage('');
+    }, 2000);
   };
 
   const handleCancelReservation = async (reservationId) => {
@@ -269,13 +524,23 @@ export default function TableBookingPage() {
       <div className="view-tabs">
         <button
           className={view === 'tables' ? 'tab-active' : ''}
-          onClick={() => setView('tables')}
+          onClick={() => {
+            setView('tables');
+            setSuccessMessage(''); // Clear any success messages
+            setErrorMessage(''); // Clear any error messages
+            loadData(); // Refresh data when switching to tables view
+          }}
         >
           Available Tables
         </button>
         <button
           className={view === 'my-reservations' ? 'tab-active' : ''}
-          onClick={() => setView('my-reservations')}
+          onClick={() => {
+            setView('my-reservations');
+            setSuccessMessage(''); // Clear any success messages
+            setErrorMessage(''); // Clear any error messages
+            loadData(); // Refresh data when switching to reservations view
+          }}
         >
           My Reservations ({myReservations.length})
         </button>
@@ -291,12 +556,32 @@ export default function TableBookingPage() {
 
       {view === 'tables' && (
         <div className="tables-view">
+          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.9rem', color: '#666' }}>
+              {tables.filter(t => t.status === 'available').length} of {tables.length} tables available
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={showOnlyAvailable}
+                onChange={(e) => setShowOnlyAvailable(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Show only available tables</span>
+            </label>
+          </div>
           <div className="tables-grid">
-            {tables.map((table) => (
+            {tables
+              .filter(table => !showOnlyAvailable || table.status === 'available')
+              .map((table) => (
               <div
                 key={table.id}
                 className="table-card"
-                style={{ borderColor: getTableTypeColor(table.table_type) }}
+                style={{
+                  borderColor: getTableTypeColor(table.table_type),
+                  opacity: table.status === 'reserved' ? 0.7 : 1,
+                  position: 'relative',
+                }}
               >
                 <div
                   className="table-type-badge"
@@ -304,6 +589,22 @@ export default function TableBookingPage() {
                 >
                   {table.table_type.toUpperCase()}
                 </div>
+                {table.status === 'reserved' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    zIndex: 10,
+                  }}>
+                    RESERVED
+                  </div>
+                )}
                 <h3>{table.name}</h3>
                 {table.zone && <p className="table-zone">{table.zone}</p>}
                 <div className="table-details">
@@ -343,10 +644,29 @@ export default function TableBookingPage() {
                   <p className="table-description">{table.description}</p>
                 )}
 
+                {table.status !== 'available' && (
+                  <div style={{
+                    padding: '8px',
+                    backgroundColor: '#ffebee',
+                    borderRadius: '4px',
+                    marginBottom: '10px',
+                    textAlign: 'center',
+                    color: '#c62828',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                  }}>
+                    ⚠️ This table is currently reserved
+                  </div>
+                )}
+
                 <button
                   className="btn btn-primary"
                   onClick={() => handleTableSelect(table)}
                   disabled={table.status !== 'available'}
+                  style={{
+                    opacity: table.status !== 'available' ? 0.5 : 1,
+                    cursor: table.status !== 'available' ? 'not-allowed' : 'pointer',
+                  }}
                 >
                   {table.status === 'available' ? 'Reserve This Table' : 'Not Available'}
                 </button>
@@ -354,9 +674,18 @@ export default function TableBookingPage() {
             ))}
           </div>
 
-          {tables.length === 0 && (
+          {tables.filter(t => !showOnlyAvailable || t.status === 'available').length === 0 && (
             <div className="empty-state">
-              <p>No tables available at this time</p>
+              <p>{showOnlyAvailable ? 'No available tables at this time' : 'No tables found'}</p>
+              {showOnlyAvailable && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowOnlyAvailable(false)}
+                  style={{ marginTop: '10px' }}
+                >
+                  Show All Tables
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -467,8 +796,32 @@ export default function TableBookingPage() {
               </div>
 
               <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Processing...' : 'Confirm Reservation'}
+                {selectedTable.deposit_amount > 0 && (
+                  <div className="payment-notice" style={{
+                    marginBottom: '15px',
+                    padding: '12px',
+                    backgroundColor: '#FFF3CD',
+                    border: '1px solid #FFE69C',
+                    borderRadius: '6px',
+                    color: '#856404',
+                  }}>
+                    <strong>💳 Payment Required</strong>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem' }}>
+                      You will be redirected to secure payment to pay the R{selectedTable.deposit_amount.toFixed(2)} deposit.
+                    </p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || paymentProcessing}
+                  style={{ width: '100%', padding: '14px', fontSize: '1rem', fontWeight: 'bold' }}
+                >
+                  {paymentProcessing ? '🔄 Redirecting to Payment...' :
+                   loading ? 'Processing...' :
+                   selectedTable.deposit_amount > 0 ?
+                     `Pay Deposit & Reserve (R${selectedTable.deposit_amount.toFixed(2)})` :
+                     'Confirm Reservation'}
                 </button>
               </div>
             </form>

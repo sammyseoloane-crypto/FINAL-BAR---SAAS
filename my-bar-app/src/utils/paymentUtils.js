@@ -390,6 +390,7 @@ export const scanQRCode = async (qrCodeString, _scannedByUserId) => {
           amount,
           metadata,
           product_id,
+          tenant_id,
           products (
             name,
             type
@@ -482,6 +483,7 @@ export const scanQRCode = async (qrCodeString, _scannedByUserId) => {
           amount,
           metadata,
           product_id,
+          tenant_id,
           products (
             name,
             type
@@ -511,6 +513,90 @@ export const scanQRCode = async (qrCodeString, _scannedByUserId) => {
     // Attach user profile to updated QR (already fetched above)
     if (userProfile) {
       updatedQR.user_profile = userProfile;
+    }
+
+    // AUTO-RECORD DRINK SALES IN DASHBOARD
+    // If this is a drink or food product, automatically create drinks_sold record
+    const productType = updatedQR.transactions?.metadata?.product_type ||
+                       updatedQR.transactions?.products?.type;
+    const productName = updatedQR.transactions?.metadata?.product_name ||
+                       updatedQR.transactions?.products?.name;
+    const quantity = updatedQR.transactions?.metadata?.quantity || 1;
+    const amount = updatedQR.transactions?.amount || 0;
+    const tenantId = updatedQR.transactions?.tenant_id;
+
+    // Record drinks and food in the drinks_sold table for dashboard metrics
+    if (productType && (productType === 'drink' || productType === 'food') && tenantId) {
+      const unitPrice = quantity > 0 ? amount / quantity : amount;
+
+      // Insert into drinks_sold table for dashboard tracking
+      const { error: drinkSoldError } = await supabase
+        .from('drinks_sold')
+        .insert({
+          tenant_id: tenantId,
+          drink_name: productName || 'Unknown Product',
+          category: productType === 'drink' ? 'drinks' : 'food',
+          quantity: quantity,
+          unit_price: unitPrice,
+          total_price: amount,
+          served_by: _scannedByUserId, // Staff member who scanned
+          shift_date: new Date().toISOString().split('T')[0],
+          timestamp: new Date().toISOString(),
+        });
+
+      if (drinkSoldError) {
+        console.error('⚠️ Warning: Failed to record in drinks_sold table:', drinkSoldError);
+        // Don't fail the whole scan if drinks_sold insert fails
+      }
+    }
+
+    // AUTO-UPDATE CROWD SIZE FOR ENTRANCE TICKETS
+    // If this is an entrance fee, update crowd tracking
+    if (productType === 'entrance_fee' && tenantId) {
+      // Get or create today's crowd tracking record
+      const todayDate = new Date().toISOString().split('T')[0];
+
+      const { data: existingCrowd } = await supabase
+        .from('crowd_tracking')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('recorded_date', todayDate)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingCrowd) {
+        // Update existing record - increment entries and current capacity
+        const { error: crowdUpdateError } = await supabase
+          .from('crowd_tracking')
+          .update({
+            current_capacity: (existingCrowd.current_capacity || 0) + quantity,
+            entries_count: (existingCrowd.entries_count || 0) + quantity,
+            timestamp: new Date().toISOString(),
+          })
+          .eq('id', existingCrowd.id);
+
+        if (crowdUpdateError) {
+          console.error('⚠️ Warning: Failed to update crowd_tracking:', crowdUpdateError);
+        }
+      } else {
+        // Create new crowd tracking record for today
+        const { error: crowdInsertError } = await supabase
+          .from('crowd_tracking')
+          .insert({
+            tenant_id: tenantId,
+            current_capacity: quantity,
+            max_capacity: 500, // Default max capacity
+            entries_count: quantity,
+            exits_count: 0,
+            recorded_date: todayDate,
+            timestamp: new Date().toISOString(),
+          });
+
+        if (crowdInsertError) {
+          console.error('⚠️ Warning: Failed to create crowd_tracking record:', crowdInsertError);
+        }
+      }
     }
 
     return {

@@ -435,6 +435,14 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/vip-host/guest-lists"
+                    element={
+                      <ProtectedRoute allowedRoles={['vip_host']}>
+                        <ManagerGuestListsPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
                   {/* Staff routes */}
                   <Route
@@ -442,6 +450,14 @@ function App() {
                     element={
                       <ProtectedRoute allowedRoles={['staff']}>
                         <MyTasksPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/staff/guest-lists"
+                    element={
+                      <ProtectedRoute allowedRoles={['staff']}>
+                        <ManagerGuestListsPage />
                       </ProtectedRoute>
                     }
                   />

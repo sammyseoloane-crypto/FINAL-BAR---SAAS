@@ -13,12 +13,13 @@
   font-size: 2.5rem;
   background: linear-gradient(135deg, #d4af37 0%, #f8d568 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 10px;
 }
 
 .page-header p {
-  color: #aaa;
+  color: #666;
   font-size: 1.1rem;
 }
 
@@ -112,7 +113,7 @@
 
 .table-card h3 {
   font-size: 1.8rem;
-  color: #999;
+  color: #1a1a1a;
   margin-bottom: 8px;
 }
 
@@ -134,12 +135,12 @@
 }
 
 .detail-label {
-  color: #aaa;
+  color: #666;
   font-size: 14px;
 }
 
 .detail-value {
-  color: #999;
+  color: #1a1a1a;
   font-weight: 600;
 }
 
@@ -171,7 +172,7 @@
 }
 
 .table-description {
-  color: #ccc;
+  color: #444;
   font-size: 14px;
   margin: 15px 0;
   line-height: 1.5;
@@ -216,7 +217,7 @@
 
 .selected-table-info h2 {
   font-size: 2rem;
-  color: #999;
+  color: #1a1a1a;
   margin-bottom: 10px;
 }
 
@@ -227,7 +228,7 @@
 }
 
 .table-summary p {
-  color: #ccc;
+  color: #333;
   margin: 8px 0;
 }
 
@@ -263,12 +264,35 @@
 .form-group select,
 .form-group textarea {
   padding: 12px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 8px;
-  color: #999;
+  color: #1a1a1a !important;
+  -webkit-text-fill-color: #1a1a1a !important;
   font-size: 16px;
   transition: all 0.3s ease;
+}
+
+.form-group select option {
+  background: #ffffff;
+  color: #1a1a1a;
+}
+
+/* Force dark text on autofill */
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus,
+.form-group textarea:-webkit-autofill,
+.form-group textarea:-webkit-autofill:hover,
+.form-group textarea:-webkit-autofill:focus,
+.form-group select:-webkit-autofill,
+.form-group select:-webkit-autofill:hover,
+.form-group select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1a1a1a !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.9) inset !important;
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.9) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  color: #1a1a1a !important;
 }
 
 .form-group input:focus,
@@ -276,12 +300,20 @@
 .form-group textarea:focus {
   outline: none;
   border-color: #d4af37;
-  background: rgba(255, 255, 255, 0.1);
+  background: #ffffff;
 }
 
 .form-group textarea {
   resize: vertical;
   font-family: inherit;
+}
+
+/* Placeholder text visibility */
+.form-group input::placeholder,
+.form-group textarea::placeholder,
+.form-group select::placeholder {
+  color: #999;
+  opacity: 1;
 }
 
 .form-actions {
@@ -359,7 +391,7 @@
 
 .reservation-header h3 {
   font-size: 1.5rem;
-  color: #999;
+  color: #1a1a1a;
   display: flex;
   align-items: center;
   gap: 15px;
@@ -422,6 +454,17 @@
   gap: 5px;
 }
 
+.detail-row .detail-label {
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.detail-row .detail-value {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
 .reservation-actions {
   margin-top: 20px;
   padding-top: 20px;
@@ -434,7 +477,7 @@
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #aaa;
+  color: #666;
 }
 
 .empty-state p {

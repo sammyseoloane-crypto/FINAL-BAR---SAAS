@@ -18,7 +18,7 @@ DELETE FROM subscription_plans WHERE tier IN ('trial', 'starter', 'professional'
 
 -- Insert new nightclub-focused subscription plans
 
--- Tier 1: Starter Plan (R799-1,200/month)
+-- Tier 1: Starter Plan (R1,200/month)
 INSERT INTO subscription_plans (
   name, display_name, tier, 
   price_monthly, price_yearly, currency,
@@ -31,9 +31,9 @@ INSERT INTO subscription_plans (
   'starter', 
   '💰 Starter Plan', 
   'starter', 
-  1000.00, 10000.00, 'ZAR',
-  1, 3, 100, 
-  5000, 2,
+  1200.00, 12000.00, 'ZAR',
+  1, 5, 100, 
+  7500, 2,
   2.50,
   '{
     "pos_system": true,
@@ -58,7 +58,7 @@ INSERT INTO subscription_plans (
   true
 );
 
--- Tier 2: Growth Plan (R2,000-3,500/month)
+-- Tier 2: Growth Plan (R2,900/month) ⭐ Most Popular
 INSERT INTO subscription_plans (
   name, display_name, tier, 
   price_monthly, price_yearly, currency,
@@ -69,11 +69,11 @@ INSERT INTO subscription_plans (
   is_active
 ) VALUES (
   'growth', 
-  '🍸 Growth Plan', 
+  '🍸 Growth Plan ⭐ Most Popular', 
   'growth', 
-  2750.00, 27500.00, 'ZAR',
-  2, 10, 300, 
-  15000, 10,
+  2900.00, 29000.00, 'ZAR',
+  2, 12, 300, 
+  20000, 10,
   2.00,
   '{
     "pos_system": true,
@@ -105,7 +105,7 @@ INSERT INTO subscription_plans (
   true
 );
 
--- Tier 3: Pro Nightclub Plan (R4,000-7,000/month)
+-- Tier 3: Pro Nightclub Plan (R5,900/month)
 INSERT INTO subscription_plans (
   name, display_name, tier, 
   price_monthly, price_yearly, currency,
@@ -118,7 +118,7 @@ INSERT INTO subscription_plans (
   'pro', 
   '🏆 Pro Nightclub Plan', 
   'pro', 
-  5500.00, 55000.00, 'ZAR',
+  5900.00, 59000.00, 'ZAR',
   3, 999999, 1000, 
   999999, 999999,
   1.50,
@@ -164,7 +164,7 @@ INSERT INTO subscription_plans (
   true
 );
 
--- Tier 4: Enterprise Venue Plan (R10,000+/month)
+-- Tier 4: Enterprise Venue Plan (R9,500/month)
 INSERT INTO subscription_plans (
   name, display_name, tier, 
   price_monthly, price_yearly, currency,
@@ -177,7 +177,7 @@ INSERT INTO subscription_plans (
   'enterprise', 
   '👑 Enterprise Venue Plan', 
   'enterprise', 
-  10000.00, 100000.00, 'ZAR',
+  9500.00, 95000.00, 'ZAR',
   999999, 999999, 999999, 
   999999, 999999,
   1.00,

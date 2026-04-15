@@ -130,6 +130,14 @@ export default function NightclubDashboard() {
 
       setRecentTransactions(transactions || []);
 
+      // Check and mark any no-shows before loading reservations
+      try {
+        await supabase.rpc('check_and_mark_no_shows');
+      } catch (noShowError) {
+        console.warn('Could not check no-shows:', noShowError);
+        // Non-critical, continue loading
+      }
+
       // Table Reservations (today and upcoming)
       const { data: reservations } = await supabase
         .from('table_reservations')
@@ -236,7 +244,7 @@ export default function NightclubDashboard() {
         `)
         .eq('tenant_id', profile.tenant_id)
         .eq('status', 'active')
-        .order('total_guests', { ascending: false })
+        .order('current_guest_count', { ascending: false })
         .limit(5);
 
       setActivePromoters(promoterStats || []);
@@ -520,7 +528,7 @@ export default function NightclubDashboard() {
                     </div>
                     <div className="promoter-stats">
                       <span className="stat-item">
-                        <span className="stat-value">{promoter.total_guests}</span>
+                        <span className="stat-value">{promoter.current_guest_count}</span>
                         <span className="stat-label">guests</span>
                       </span>
                       <span className="stat-item">

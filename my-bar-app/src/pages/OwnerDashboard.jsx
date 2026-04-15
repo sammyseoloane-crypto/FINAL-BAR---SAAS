@@ -128,6 +128,24 @@ export default function OwnerDashboard() {
           </div>
 
           <div className="dashboard-card">
+            <div className="card-icon">🥂</div>
+            <h3>VIP Tables</h3>
+            <p>Manage VIP table reservations and pricing</p>
+            <button className="btn-card" onClick={() => navigate('/owner/vip-tables')}>
+              Manage VIP Tables
+            </button>
+          </div>
+
+          <div className="dashboard-card">
+            <div className="card-icon">🎵</div>
+            <h3>Live Performance</h3>
+            <p>Real-time club metrics and analytics</p>
+            <button className="btn-card" onClick={() => navigate('/owner/club-dashboard')}>
+              View Live Data
+            </button>
+          </div>
+
+          <div className="dashboard-card">
             <div className="card-icon">⚙️</div>
             <h3>Settings</h3>
             <p>Configure business settings</p>

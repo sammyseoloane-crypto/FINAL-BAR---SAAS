@@ -61,6 +61,7 @@ function DashboardLayout({ children }) {
         return [
           { to: '/dashboard', label: 'Dashboard', icon: '🏠' },
           { to: '/staff/tasks', label: 'My Tasks', icon: '📝' },
+          { to: '/staff/guest-lists', label: 'Guest Check-In', icon: '📋' },
           { to: '/staff/tabs', label: 'Bar Tabs', icon: '🍹' },
           { to: '/staff/qr-codes', label: 'Table QR Codes', icon: '📱' },
           { to: '/staff/payments', label: 'Confirm Payments', icon: '💳' },
@@ -78,6 +79,7 @@ function DashboardLayout({ children }) {
           { to: '/dashboard', label: 'Dashboard', icon: '🏠' },
           { to: '/vip-host/tables', label: 'Table Reservations', icon: '🪑' },
           { to: '/vip-host/bottle-service', label: 'Bottle Service', icon: '🍾' },
+          { to: '/vip-host/guest-lists', label: 'Guest Lists', icon: '📋' },
           { to: '/vip-host/guests', label: 'VIP Guests', icon: '⭐' },
         ];
       case 'customer':

@@ -69,6 +69,8 @@ AnimatedCounter.propTypes = {
 export default function ClubDashboard() {
   const [tenantId, setTenantId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasData, setHasData] = useState(false);
 
   // KPI Metrics
   const [revenueTonight, setRevenueTonight] = useState(0);
@@ -123,28 +125,38 @@ export default function ClubDashboard() {
 
     try {
       // Load revenue stats
-      const { data: revenueData } = await supabase
+      const { data: revenueData, error: revenueError } = await supabase
         .rpc('get_tonight_revenue_stats', { p_tenant_id: tenantId });
 
-      if (revenueData && revenueData.length > 0) {
+      if (revenueError) {
+        console.error('Error loading revenue stats:', revenueError);
+      } else if (revenueData && revenueData.length > 0) {
         setRevenueTonight(parseFloat(revenueData[0].total_revenue) || 0);
       }
 
       // Load drinks sold today
-      const { data: drinksData } = await supabase
+      const { data: drinksData, error: drinksError } = await supabase
         .from('drinks_sold')
         .select('quantity')
         .eq('tenant_id', tenantId)
         .eq('shift_date', new Date().toISOString().split('T')[0]);
 
-      const totalDrinks = drinksData?.reduce((sum, d) => sum + d.quantity, 0) || 0;
-      setDrinksSold(totalDrinks);
+      if (drinksError) {
+        console.error('Error loading drinks:', drinksError);
+      } else {
+        const totalDrinks = drinksData?.reduce((sum, d) => sum + d.quantity, 0) || 0;
+        setDrinksSold(totalDrinks);
+      }
 
       // Load active VIP tables
-      const { data: vipCount } = await supabase
+      const { data: vipCount, error: vipError } = await supabase
         .rpc('get_active_vip_tables', { p_tenant_id: tenantId });
 
-      setVipTablesActive(vipCount || 0);
+      if (vipError) {
+        console.error('Error loading VIP tables:', vipError);
+      } else {
+        setVipTablesActive(vipCount || 0);
+      }
 
       // Load guest list entries (checked in)
       const todayStart = new Date();
@@ -218,9 +230,21 @@ export default function ClubDashboard() {
 
       setHourlyGuests(hourlyGuestData || []);
 
+      // Check if we have any data
+      const dataExists =
+        (revenueData && revenueData.length > 0 && revenueData[0].total_revenue > 0) ||
+        (drinksData && drinksData.length > 0) ||
+        (vipCount && vipCount > 0) ||
+        (guestData && guestData.length > 0) ||
+        (topDrinksData && topDrinksData.length > 0) ||
+        (hourlyRevData && hourlyRevData.length > 0);
+
+      setHasData(dataExists);
       setLastUpdate(new Date());
+      setError(null);
     } catch (error) {
       console.error('Error loading metrics:', error);
+      setError(error.message);
     }
   }, [tenantId]);
 
@@ -361,6 +385,15 @@ export default function ClubDashboard() {
     );
   }
 
+  if (!tenantId) {
+    return (
+      <div className="club-dashboard-error">
+        <h2>⚠️ No Tenant Found</h2>
+        <p>Unable to load dashboard. Please ensure you&apos;re logged in with a valid account.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="club-dashboard">
       {/* Header */}
@@ -373,6 +406,29 @@ export default function ClubDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Error Message */}
+      {error && (
+        <div className="error-banner">
+          <strong>⚠️ Error:</strong> {error}
+        </div>
+      )}
+
+      {/* No Data Warning */}
+      {!hasData && !error && (
+        <div className="info-banner">
+          <h3>📊 No Data Yet</h3>
+          <p>Your dashboard is ready, but there&apos;s no data to display yet.</p>
+          <p><strong>To populate sample data:</strong></p>
+          <ol>
+            <li>Go to your Supabase Dashboard</li>
+            <li>Open SQL Editor</li>
+            <li>Run the <code>POPULATE_SAMPLE_DASHBOARD_DATA.sql</code> script</li>
+            <li>Refresh this page</li>
+          </ol>
+          <p>Or wait for real transactions and activity to start flowing in!</p>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="kpi-grid">

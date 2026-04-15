@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../supabaseClient';
 import DashboardLayout from '../../components/DashboardLayout';
+import {
+  canAddGuests,
+  canEditGuest,
+  canRemoveGuests,
+  canVerifyGuests,
+  getPermissionSummary,
+} from '../../utils/guestListPermissions';
 import '../Dashboard.css';
 
 export default function GuestListsPage() {
@@ -11,6 +18,14 @@ export default function GuestListsPage() {
   const [selectedList, setSelectedList] = useState(null);
   const [guests, setGuests] = useState([]);
   const [loadingGuests, setLoadingGuests] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingGuest, setEditingGuest] = useState(null);
+  const [guestForm, setGuestForm] = useState({
+    guest_name: '',
+    guest_email: '',
+    guest_phone: '',
+    plus_ones: 0,
+  });
 
   useEffect(() => {
     fetchGuestLists();
@@ -120,6 +135,132 @@ export default function GuestListsPage() {
     }
   };
 
+  const addGuest = async (e) => {
+    e.preventDefault();
+
+    if (!canAddGuests(userProfile.role)) {
+      alert('You do not have permission to add guests');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('guest_list_entries')
+        .insert({
+          guest_list_id: selectedList.id,
+          guest_name: guestForm.guest_name,
+          guest_email: guestForm.guest_email || null,
+          guest_phone: guestForm.guest_phone || null,
+          plus_ones: parseInt(guestForm.plus_ones) || 0,
+          status: 'approved', // Managers/owners can approve immediately
+          added_by: userProfile.id,
+          tenant_id: userProfile.tenant_id,
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      alert('Guest added successfully');
+      setShowAddForm(false);
+      setGuestForm({ guest_name: '', guest_email: '', guest_phone: '', plus_ones: 0 });
+      fetchGuests(selectedList.id);
+      fetchGuestLists(); // Refresh counts
+    } catch (error) {
+      console.error('Error adding guest:', error);
+      alert(`Failed to add guest: ${error.message}`);
+    }
+  };
+
+  const updateGuest = async (e) => {
+    e.preventDefault();
+
+    if (!editingGuest) {
+      return;
+    }
+
+    // Check if user can edit this specific guest
+    if (!canEditGuest(userProfile.role, userProfile.id, editingGuest.added_by)) {
+      alert('You can only edit guests you added');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('guest_list_entries')
+        .update({
+          guest_name: guestForm.guest_name,
+          guest_email: guestForm.guest_email || null,
+          guest_phone: guestForm.guest_phone || null,
+          plus_ones: parseInt(guestForm.plus_ones) || 0,
+        })
+        .eq('id', editingGuest.id);
+
+      if (error) {
+        throw error;
+      }
+
+      alert('Guest updated successfully');
+      setEditingGuest(null);
+      setGuestForm({ guest_name: '', guest_email: '', guest_phone: '', plus_ones: 0 });
+      fetchGuests(selectedList.id);
+    } catch (error) {
+      console.error('Error updating guest:', error);
+      alert(`Failed to update guest: ${error.message}`);
+    }
+  };
+
+  const removeGuest = async (guestId) => {
+    if (!canRemoveGuests(userProfile.role)) {
+      alert('You do not have permission to remove guests');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to remove this guest?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('guest_list_entries')
+        .delete()
+        .eq('id', guestId);
+
+      if (error) {
+        throw error;
+      }
+
+      alert('Guest removed successfully');
+      fetchGuests(selectedList.id);
+      fetchGuestLists(); // Refresh counts
+    } catch (error) {
+      console.error('Error removing guest:', error);
+      alert(`Failed to remove guest: ${error.message}`);
+    }
+  };
+
+  const startEditGuest = (guest) => {
+    // Check permission before allowing edit
+    if (!canEditGuest(userProfile.role, userProfile.id, guest.added_by)) {
+      alert('You can only edit guests you added');
+      return;
+    }
+
+    setEditingGuest(guest);
+    setGuestForm({
+      guest_name: guest.guest_name || '',
+      guest_email: guest.guest_email || '',
+      guest_phone: guest.guest_phone || '',
+      plus_ones: guest.plus_ones || 0,
+    });
+    setShowAddForm(false); // Close add form if open
+  };
+
+  const cancelEdit = () => {
+    setEditingGuest(null);
+    setGuestForm({ guest_name: '', guest_email: '', guest_phone: '', plus_ones: 0 });
+  };
+
   const viewListDetails = (list) => {
     setSelectedList(list);
     fetchGuests(list.id);
@@ -151,6 +292,124 @@ export default function GuestListsPage() {
               <p><strong>Promoter:</strong> {selectedList.promoter?.full_name || selectedList.promoter?.email || 'N/A'}</p>
               <p><strong>Total Guests:</strong> {selectedList.current_guest_count || 0} | <strong>Checked In:</strong> {selectedList.checked_in_count || 0}</p>
             </div>
+
+            {/* Add Guest Button */}
+            {canAddGuests(userProfile.role) && !editingGuest && (
+              <button
+                onClick={() => {
+                  setShowAddForm(!showAddForm);
+                  setEditingGuest(null);
+                }}
+                className="btn-success"
+                style={{ marginBottom: '15px' }}
+              >
+                {showAddForm ? 'Cancel' : '+ Add Guest'}
+              </button>
+            )}
+
+            {/* Add Guest Form */}
+            {showAddForm && !editingGuest && (
+              <div className="form-container" style={{ marginBottom: '20px' }}>
+                <h3>Add New Guest</h3>
+                <form onSubmit={addGuest}>
+                  <div className="form-group">
+                    <label>Guest Name *</label>
+                    <input
+                      type="text"
+                      value={guestForm.guest_name}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={guestForm.guest_email}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input
+                      type="tel"
+                      value={guestForm.guest_phone}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Plus Ones</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={guestForm.plus_ones}
+                      onChange={(e) => setGuestForm({ ...guestForm, plus_ones: e.target.value })}
+                    />
+                  </div>
+                  <button type="submit" className="btn-success">Add Guest</button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="btn-secondary"
+                    style={{ marginLeft: '10px' }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Edit Guest Form */}
+            {editingGuest && (
+              <div className="form-container" style={{ marginBottom: '20px', backgroundColor: '#fff3cd' }}>
+                <h3>✏️ Edit Guest</h3>
+                <form onSubmit={updateGuest}>
+                  <div className="form-group">
+                    <label>Guest Name *</label>
+                    <input
+                      type="text"
+                      value={guestForm.guest_name}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={guestForm.guest_email}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone</label>
+                    <input
+                      type="tel"
+                      value={guestForm.guest_phone}
+                      onChange={(e) => setGuestForm({ ...guestForm, guest_phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Plus Ones</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={guestForm.plus_ones}
+                      onChange={(e) => setGuestForm({ ...guestForm, plus_ones: e.target.value })}
+                    />
+                  </div>
+                  <button type="submit" className="btn-success">Save Changes</button>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="btn-secondary"
+                    style={{ marginLeft: '10px' }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            )}
 
             {loadingGuests ? (
               <div className="loading">Loading guests...</div>
@@ -188,6 +447,18 @@ export default function GuestListsPage() {
                           )}
                         </td>
                         <td>
+                          {/* Edit Button - Only if user can edit this specific guest */}
+                          {canEditGuest(userProfile.role, userProfile.id, guest.added_by) && (
+                            <button
+                              onClick={() => startEditGuest(guest)}
+                              className="btn-secondary"
+                              style={{ marginRight: '5px' }}
+                            >
+                              ✏️ Edit
+                            </button>
+                          )}
+
+                          {/* Approve Button */}
                           {guest.status === 'pending' && (
                             <button
                               onClick={() => approveGuest(guest.id)}
@@ -197,12 +468,25 @@ export default function GuestListsPage() {
                               Approve
                             </button>
                           )}
-                          {guest.status === 'approved' && !guest.checked_in && (
+
+                          {/* Check In Button - Only if user can verify guests */}
+                          {canVerifyGuests(userProfile.role) && guest.status === 'approved' && !guest.checked_in && (
                             <button
                               onClick={() => checkInGuest(guest.id)}
                               className="btn-primary"
+                              style={{ marginRight: '5px' }}
                             >
                               Check In
+                            </button>
+                          )}
+
+                          {/* Remove Button - Only if user can remove guests */}
+                          {canRemoveGuests(userProfile.role) && (
+                            <button
+                              onClick={() => removeGuest(guest.id)}
+                              className="btn-danger"
+                            >
+                              Remove
                             </button>
                           )}
                         </td>
@@ -267,12 +551,11 @@ export default function GuestListsPage() {
         )}
 
         <div className="info-box" style={{ marginTop: '20px' }}>
-          <strong>ℹ️ Guest List Management:</strong>
+          <strong>ℹ️ Your Permissions ({userProfile.role}):</strong>
           <ul>
-            <li>✅ View all guest lists for events</li>
-            <li>✅ Approve pending guests</li>
-            <li>✅ Check in guests at the door</li>
-            <li>✅ Track attendance and plus-ones</li>
+            {getPermissionSummary(userProfile.role).map((permission, index) => (
+              <li key={index}>✅ {permission}</li>
+            ))}
           </ul>
         </div>
       </div>

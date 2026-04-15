@@ -181,34 +181,62 @@ async function handleWebhook(req: Request): Promise<Response> {
       }
 
       // Create transactions from line items
-      const transactions = lineItems.data.map((item: any) => {
+      const transactions = lineItems.data.flatMap((item: any) => {
         const productName = item.description || item.price?.product?.name || 'Unknown Product'
         const unitAmount = item.price?.unit_amount || 0
         const quantity = item.quantity || 1
-        const totalAmount = (unitAmount / 100) * quantity // Convert from cents to currency
+        const unitPrice = unitAmount / 100
 
         // Determine transaction type from product name/description
-        // You can enhance this logic based on your needs
-        const isEvent = productName.toLowerCase().includes('event') || 
+        const isEvent = productName.toLowerCase().includes('event') ||
                        productName.toLowerCase().includes('entry')
 
-        const baseTransaction = {
-          user_id: userId,
-          tenant_id: tenantId,
-          amount: totalAmount,
-          status: 'confirmed',
-          stripe_session_id: session.id,
-          stripe_payment_intent: session.payment_intent,
-          type: isEvent ? 'event_entry' : 'product_purchase',
-          metadata: {
-            product_name: productName,
-            quantity: quantity,
-            unit_price: unitAmount / 100,
-            stripe_price_id: item.price?.id,
-          },
-        }
+        // Check if this is a ticket/entrance product that needs individual QR codes
+        const isTicketProduct = productName.toLowerCase().includes('ticket') ||
+                               productName.toLowerCase().includes('entrance')
 
-        return baseTransaction
+        // For ticket/entrance products with quantity > 1, create separate transactions
+        // For other products (drinks, food), create one transaction with quantity in metadata
+        if (isTicketProduct && quantity > 1) {
+          // Create individual transactions for each ticket
+          return Array.from({ length: quantity }, (_, index) => ({
+            user_id: userId,
+            tenant_id: tenantId,
+            amount: unitPrice, // Individual ticket price
+            status: 'confirmed',
+            stripe_session_id: session.id,
+            stripe_payment_intent: session.payment_intent,
+            type: isEvent ? 'event_entry' : 'product_purchase',
+            metadata: {
+              product_name: productName,
+              product_type: 'entrance_fee',
+              quantity: 1, // Each ticket is quantity 1
+              ticket_number: index + 1,
+              total_tickets: quantity,
+              unit_price: unitPrice,
+              stripe_price_id: item.price?.id,
+            },
+          }))
+        } else {
+          // For non-ticket products or single tickets, create one transaction
+          const totalAmount = unitPrice * quantity
+          return [{
+            user_id: userId,
+            tenant_id: tenantId,
+            amount: totalAmount,
+            status: 'confirmed',
+            stripe_session_id: session.id,
+            stripe_payment_intent: session.payment_intent,
+            type: isEvent ? 'event_entry' : 'product_purchase',
+            metadata: {
+              product_name: productName,
+              product_type: isTicketProduct ? 'entrance_fee' : 'product',
+              quantity: quantity,
+              unit_price: unitPrice,
+              stripe_price_id: item.price?.id,
+            },
+          }]
+        }
       })
 
       console.log('💾 Inserting transactions...', transactions.length)
@@ -245,13 +273,15 @@ async function handleWebhook(req: Request): Promise<Response> {
         console.log('📝 Transaction IDs:', createdTransactions.map((t: any) => t.id))
         
         // Generate unique QR codes with timestamp and random component
-        const qrCodes = createdTransactions.map((transaction: any) => {
+        // Add index to ensure uniqueness even for simultaneous generation
+        const qrCodes = createdTransactions.map((transaction: any, index: number) => {
           const timestamp = Date.now()
           const random = Math.random().toString(36).substring(2, 15)
+          const uniqueId = `${timestamp}_${index}_${random}`
           return {
             transaction_id: transaction.id,
             user_id: userId,
-            code: `${transaction.tenant_id}_${userId}_${transaction.id}_${timestamp}_${random}`
+            code: `${transaction.tenant_id}_${userId}_${transaction.id}_${uniqueId}`
           }
         })
 

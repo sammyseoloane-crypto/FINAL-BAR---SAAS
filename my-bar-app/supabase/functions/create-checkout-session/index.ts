@@ -357,19 +357,51 @@ Deno.serve(async (req: Request) => {
           price: item.price
         }))
         
+        // Check if this is a table deposit checkout
+        const isTableDeposit = cartItems.some((item: any) => item.type === 'table_deposit')
+        
+        // Use different success URLs based on checkout type
+        const successUrl = isTableDeposit
+          ? `${req.headers.get('origin')}/customer/tables?session_id={CHECKOUT_SESSION_ID}&success=true`
+          : `${req.headers.get('origin')}/customer/orders?session_id={CHECKOUT_SESSION_ID}&success=true`
+        
+        const cancelUrl = isTableDeposit
+          ? `${req.headers.get('origin')}/customer/tables?canceled=true`
+          : `${req.headers.get('origin')}/customer/orders?canceled=true`
+        
+        console.log('🏷️ Checkout type:', isTableDeposit ? 'TABLE DEPOSIT' : 'CART/ORDER')
+        console.log('🔗 Success URL:', successUrl)
+        console.log('🔗 Cancel URL:', cancelUrl)
+        
+        // For table deposits, store reservation data in metadata
+        const metadata: any = {
+          userId: user.id,
+          tenantId: userProfile.tenant_id,
+          userRole: userProfile.role,
+          itemCount: cartItems.length.toString(),
+          totalAmount: totalAmount?.toString() || '0',
+        }
+        
+        if (isTableDeposit) {
+          // Find the table deposit item
+          const tableItem = cartItems.find((item: any) => item.type === 'table_deposit')
+          if (tableItem) {
+            // Store reservation data in metadata (Stripe limit: 500 chars per value)
+            metadata.checkoutType = 'table_deposit'
+            metadata.tableId = tableItem.id
+            metadata.tableName = tableItem.name
+            metadata.depositAmount = tableItem.price.toString()
+            console.log('💾 Storing table reservation data in Stripe metadata')
+          }
+        }
+        
         sessionConfig = {
           payment_method_types: ['card'],
           line_items: lineItems,
           mode: 'payment',
-          success_url: `${req.headers.get('origin')}/customer/orders?session_id={CHECKOUT_SESSION_ID}&success=true`,
-          cancel_url: `${req.headers.get('origin')}/customer/orders?canceled=true`,
-          metadata: {
-            userId: user.id,
-            tenantId: userProfile.tenant_id,
-            userRole: userProfile.role,
-            itemCount: cartItems.length.toString(),
-            totalAmount: totalAmount?.toString() || '0',
-          },
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata: metadata,
         }
       }
       

@@ -14,13 +14,44 @@
   margin-bottom: 2rem;
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .dashboard-header h1 {
   font-size: 2.5rem;
-  margin-bottom: 1rem;
+  margin: 0;
   background: linear-gradient(135deg, #d4af37 0%, #c9a227 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.btn-create-table {
+  padding: 0.875rem 1.75rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.btn-create-table:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-create-table:active {
+  transform: translateY(0);
 }
 
 /* View Toggle */
@@ -221,19 +252,21 @@
 
 /* Table Actions */
 .table-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 0.5rem;
   margin-top: 1rem;
 }
 
 .table-actions button {
-  flex: 1;
-  padding: 0.75rem;
+  padding: 0.75rem 0.5rem;
   border: none;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .btn-reserve {
@@ -251,6 +284,18 @@
   cursor: not-allowed;
 }
 
+.btn-edit {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.btn-edit:hover {
+  background: rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+}
+
 .btn-pricing {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
@@ -260,6 +305,30 @@
 .btn-pricing:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
+}
+
+.btn-disable {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.btn-disable:hover {
+  background: rgba(251, 146, 60, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(251, 146, 60, 0.3);
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
 }
 
 /* Revenue Heatmap */
@@ -433,6 +502,18 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
+/* Ensure all inputs in modals have white text */
+.modal-content * {
+  color: inherit;
+}
+
+.modal-content input,
+.modal-content textarea,
+.modal-content select {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
 .modal-content h2 {
   margin-top: 0;
   margin-bottom: 1.5rem;
@@ -451,21 +532,66 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
   width: 100%;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1) !important;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  color: #fff;
+  color: #fff !important;
   font-size: 1rem;
+  -webkit-text-fill-color: #fff !important;
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
   border-color: #d4af37;
   box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.form-group select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+/* Prevent autofill from making text black */
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus,
+.form-group textarea:-webkit-autofill,
+.form-group textarea:-webkit-autofill:hover,
+.form-group textarea:-webkit-autofill:focus,
+.form-group select:-webkit-autofill,
+.form-group select:-webkit-autofill:hover,
+.form-group select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+  box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.1) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  color: #fff !important;
+}
+
+/* Force white text on all input types */
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content input[type="tel"],
+.modal-content input[type="email"],
+.modal-content input[type="date"],
+.modal-content input[type="time"],
+.modal-content textarea,
+.modal-content select {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* Placeholder text visibility */
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+  opacity: 1;
 }
 
 .form-group small {

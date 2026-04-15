@@ -34,7 +34,7 @@ export default function QRCodesPage() {
     }
   };
 
-  const downloadQRCode = (qr, index = null) => {
+  const downloadQRCode = (qr) => {
     // Find the QR code SVG element
     const qrContainer = document.querySelector(`#qr-container-${qr.id}`);
     if (!qrContainer) {
@@ -49,6 +49,8 @@ export default function QRCodesPage() {
     // Get transaction details
     const itemName = getDisplayName(qr.transactions);
     const quantity = qr.transactions?.metadata?.quantity || 1;
+    const ticketNumber = qr.transactions?.metadata?.ticket_number || null;
+    const totalTickets = qr.transactions?.metadata?.total_tickets || quantity;
     const amount = qr.transactions?.amount || 0;
     const createdDate = new Date(qr.created_at);
 
@@ -96,7 +98,9 @@ export default function QRCodesPage() {
 
     // Check if it's entrance fee by type OR by name (fallback for before migration)
     const isEntranceFee =
-      productTypeRaw === 'entrance_fee' || productName.toLowerCase().includes('entrance');
+      productTypeRaw === 'entrance_fee' ||
+      productName.toLowerCase().includes('entrance') ||
+      productName.toLowerCase().includes('ticket');
     const venue = isEntranceFee ? 'ENTRANCE' : 'COUNTER';
     const venueColor = isEntranceFee ? '#48bb78' : '#ed8936';
 
@@ -149,20 +153,18 @@ export default function QRCodesPage() {
       ctx.fillText(createdDate.toLocaleDateString(), width / 2 + 20, detailsY + 30);
 
       // Quantity indicator - different display for entrance vs products
-      if (quantity > 1) {
-        if (index !== null) {
-          // Entrance fee - show ticket number
-          ctx.fillStyle = '#d4af37';
-          ctx.font = 'bold 18px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(`🎫 Ticket ${index + 1} of ${quantity}`, width / 2, detailsY + 80);
-        } else {
-          // Drinks/Food - show total quantity on one ticket
-          ctx.fillStyle = '#48bb78';
-          ctx.font = 'bold 18px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(`📦 Quantity: ${quantity} items`, width / 2, detailsY + 80);
-        }
+      if (ticketNumber !== null && totalTickets > 1) {
+        // This is part of a multi-ticket purchase - show ticket number
+        ctx.fillStyle = '#d4af37';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🎫 Ticket ${ticketNumber} of ${totalTickets}`, width / 2, detailsY + 80);
+      } else if (quantity > 1 && ticketNumber === null) {
+        // Legacy behavior for old purchases or grouped products (drinks/food)
+        ctx.fillStyle = '#48bb78';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`📦 Quantity: ${quantity} items`, width / 2, detailsY + 80);
       }
 
       // Footer with venue-specific instruction
@@ -179,9 +181,10 @@ export default function QRCodesPage() {
       canvas.toBlob((blob) => {
         const link = document.createElement('a');
         const sanitizedName = itemName.replace(/[^a-z0-9]/gi, '_');
-        // For entrance fees: ItemName_1of3.png, ItemName_2of3.png, etc.
-        // For drinks/food: ItemName.png (quantity shown on ticket)
-        const suffix = index !== null ? `_Ticket${index + 1}of${quantity}` : '';
+        // If part of multi-ticket purchase, include ticket number in filename
+        const suffix = ticketNumber !== null && totalTickets > 1
+          ? `_Ticket${ticketNumber}of${totalTickets}`
+          : '';
         link.download = `${sanitizedName}${suffix}.png`;
         link.href = URL.createObjectURL(blob);
         link.click();
@@ -212,30 +215,156 @@ export default function QRCodesPage() {
     ctx.fillText(line, x, y);
   };
 
-  // Download all QR codes for quantity > 1
+  // Download QR code - handles both old and new QR code formats
   const downloadAllQRCodes = (qr) => {
     const quantity = qr.transactions?.metadata?.quantity || 1;
-    // Prioritize metadata (source of truth from purchase time)
-    const productType = qr.transactions?.metadata?.product_type || qr.transactions?.products?.type;
-    const productName =
-      qr.transactions?.metadata?.product_name || qr.transactions?.products?.name || '';
+    const ticketNumber = qr.transactions?.metadata?.ticket_number;
+    const productTypeRaw = qr.transactions?.metadata?.product_type || qr.transactions?.products?.type;
+    const productName = qr.transactions?.metadata?.product_name || qr.transactions?.products?.name || '';
 
-    // Only entrance fees get separate QR codes per quantity
-    // Drinks and food are grouped in one QR code (order-based)
-    // Check by type OR name (fallback for before migration)
-    const isEntranceFee =
-      productType === 'entrance_fee' || productName.toLowerCase().includes('entrance');
-    const shouldSeparate = isEntranceFee;
+    // Check if it's a ticket/entrance product
+    const isTicketProduct = productTypeRaw === 'entrance_fee' ||
+                           productName.toLowerCase().includes('entrance') ||
+                           productName.toLowerCase().includes('ticket');
 
-    if (quantity <= 1 || !shouldSeparate) {
+    // NEW FORMAT: QR code already has ticket_number (one QR per ticket)
+    if (ticketNumber !== null && ticketNumber !== undefined) {
       downloadQRCode(qr);
-    } else {
-      // Download separate QR code for each entrance fee ticket
-      for (let i = 0; i < quantity; i++) {
-        setTimeout(() => downloadQRCode(qr, i), i * 500); // Delay to avoid browser blocking
-      }
-      alert(`Downloading ${quantity} entrance tickets. Please check your downloads folder.`);
+      return;
     }
+
+    // OLD FORMAT: Legacy QR codes with quantity > 1 but no ticket_number
+    // Need to generate multiple downloads for backward compatibility
+    if (isTicketProduct && quantity > 1) {
+      // Download separate ticket for each quantity
+      for (let i = 0; i < quantity; i++) {
+        setTimeout(() => downloadQRCodeLegacy(qr, i, quantity), i * 500);
+      }
+      alert(`Downloading ${quantity} tickets. Please check your downloads folder.`);
+    } else {
+      // Single item or non-ticket product
+      downloadQRCode(qr);
+    }
+  };
+
+  // Legacy download function for old QR codes with quantity > 1
+  const downloadQRCodeLegacy = (qr, index, totalQuantity) => {
+    const qrContainer = document.querySelector(`#qr-container-${qr.id}`);
+    if (!qrContainer) {
+      return;
+    }
+
+    const svg = qrContainer.querySelector('svg');
+    if (!svg) {
+      return;
+    }
+
+    const itemName = getDisplayName(qr.transactions);
+    const amount = qr.transactions?.amount || 0;
+    const createdDate = new Date(qr.created_at);
+
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const width = 800;
+    const height = 1000;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // Gradient background
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#ee0979');
+    gradient.addColorStop(1, '#ff6a00');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // White content area
+    ctx.fillStyle = 'white';
+    ctx.fillRect(40, 40, width - 80, height - 80);
+
+    // Item name
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'left';
+    const nameY = 100;
+    wrapText(ctx, itemName.toUpperCase(), 60, nameY, width - 120, 40);
+
+    // Product type badge
+    const productType = getDisplayType(qr.transactions);
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(60, nameY + 60, 200, 40);
+    ctx.fillStyle = 'white';
+    ctx.font = '18px Arial';
+    ctx.fillText(productType, 70, nameY + 88);
+
+    // Venue badge
+    ctx.fillStyle = '#48bb78';
+    ctx.fillRect(width - 260, nameY + 60, 200, 40);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 20px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('📍 ENTRANCE', width - 160, nameY + 88);
+
+    // QR Code
+    const qrSize = 350;
+    const qrX = (width - qrSize) / 2;
+    const qrY = 280;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+      // QR Code string
+      ctx.fillStyle = '#666';
+      ctx.font = '14px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(qr.code.substring(0, 30), width / 2, qrY + qrSize + 30);
+      ctx.fillText(qr.code.substring(30), width / 2, qrY + qrSize + 50);
+
+      // Details
+      const detailsY = qrY + qrSize + 100;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#999';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText('AMOUNT', 60, detailsY);
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 24px Arial';
+      const unitPrice = amount / totalQuantity;
+      ctx.fillText(`R ${parseFloat(unitPrice).toFixed(2)}`, 60, detailsY + 30);
+
+      ctx.fillStyle = '#999';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText('PURCHASE DATE', width / 2 + 20, detailsY);
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText(createdDate.toLocaleDateString(), width / 2 + 20, detailsY + 30);
+
+      // Ticket number indicator
+      ctx.fillStyle = '#d4af37';
+      ctx.font = 'bold 18px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🎫 Ticket ${index + 1} of ${totalQuantity}`, width / 2, detailsY + 80);
+
+      // Footer
+      ctx.fillStyle = '#ccc';
+      ctx.font = '14px Arial';
+      ctx.fillText('📍 Present this QR code at the ENTRANCE', width / 2, height - 60);
+
+      // Download
+      canvas.toBlob((blob) => {
+        const link = document.createElement('a');
+        const sanitizedName = itemName.replace(/[^a-z0-9]/gi, '_');
+        link.download = `${sanitizedName}_Ticket${index + 1}of${totalQuantity}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+    };
+    img.src = url;
   };
 
   // Check if QR code has expired (24 hours after creation)
@@ -447,12 +576,16 @@ export default function QRCodesPage() {
                             onMouseOver={(e) => (e.target.style.background = '#c9a227')}
                             onMouseOut={(e) => (e.target.style.background = '#d4af37')}
                           >
-                            📥 Download QR Code
-                            {qr.transactions?.metadata?.quantity > 1 &&
-                            (qr.transactions?.products?.type === 'entrance_fee' ||
-                              qr.transactions?.metadata?.product_type === 'entrance_fee')
-                              ? 's'
-                              : ''}
+                            📥 Download QR Code{(() => {
+                              const quantity = qr.transactions?.metadata?.quantity || 1;
+                              const ticketNumber = qr.transactions?.metadata?.ticket_number;
+                              const productTypeRaw = qr.transactions?.metadata?.product_type || qr.transactions?.products?.type;
+                              const productName = qr.transactions?.metadata?.product_name || qr.transactions?.products?.name || '';
+                              const isTicketProduct = productTypeRaw === 'entrance_fee' ||
+                                                     productName.toLowerCase().includes('entrance') ||
+                                                     productName.toLowerCase().includes('ticket');
+                              return (!ticketNumber && isTicketProduct && quantity > 1) ? 's' : '';
+                            })()}
                           </button>
                         </div>
 
@@ -463,7 +596,12 @@ export default function QRCodesPage() {
                           <p style={{ margin: '5px 0', fontSize: '0.9em' }}>
                             <strong>Item:</strong> {getDisplayName(qr.transactions)}
                           </p>
-                          {qr.transactions?.metadata?.quantity && (
+                          {qr.transactions?.metadata?.ticket_number && (
+                            <p style={{ margin: '5px 0', fontSize: '0.9em' }}>
+                              <strong>Ticket:</strong> {qr.transactions.metadata.ticket_number} of {qr.transactions.metadata.total_tickets}
+                            </p>
+                          )}
+                          {qr.transactions?.metadata?.quantity && !qr.transactions?.metadata?.ticket_number && (
                             <p style={{ margin: '5px 0', fontSize: '0.9em' }}>
                               <strong>Quantity:</strong> {qr.transactions.metadata.quantity}
                             </p>
@@ -473,24 +611,36 @@ export default function QRCodesPage() {
                           </p>
                         </div>
 
-                        {qr.transactions?.metadata?.quantity > 1 &&
-                          (qr.transactions?.products?.type === 'entrance_fee' ||
-                            qr.transactions?.metadata?.product_type === 'entrance_fee') && (
-                          <div
-                            style={{
-                              background: '#fff3cd',
-                              padding: '10px',
-                              borderRadius: '4px',
-                              fontSize: '0.85em',
-                              marginBottom: '10px',
-                              border: '1px solid #ffc107',
-                              color: '#856404',
-                            }}
-                          >
-                              🎫 Downloading will create {qr.transactions.metadata.quantity}{' '}
-                              separate entrance tickets (one per person)
-                          </div>
-                        )}
+                        {/* Warning for old-format QR codes with multiple quantities */}
+                        {(() => {
+                          const quantity = qr.transactions?.metadata?.quantity || 1;
+                          const ticketNumber = qr.transactions?.metadata?.ticket_number;
+                          const productTypeRaw = qr.transactions?.metadata?.product_type || qr.transactions?.products?.type;
+                          const productName = qr.transactions?.metadata?.product_name || qr.transactions?.products?.name || '';
+                          const isTicketProduct = productTypeRaw === 'entrance_fee' ||
+                                                 productName.toLowerCase().includes('entrance') ||
+                                                 productName.toLowerCase().includes('ticket');
+
+                          // Show warning only for old-format QR codes (no ticket_number) with quantity > 1
+                          if (!ticketNumber && isTicketProduct && quantity > 1) {
+                            return (
+                              <div
+                                style={{
+                                  background: '#fff3cd',
+                                  padding: '10px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.85em',
+                                  marginBottom: '10px',
+                                  border: '1px solid #ffc107',
+                                  color: '#856404',
+                                }}
+                              >
+                                🎫 Downloading will create {quantity} separate entrance tickets (one per person)
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
                         <div
                           style={{
